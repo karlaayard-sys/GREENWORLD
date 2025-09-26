@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
+    <script>
+function redirigir() {
+    // Esto hará que el navegador cargue el archivo cambioclimatico.html
+    window.location.href = "cambioclimatico.html";
+}
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,11 +18,6 @@
     <p>Este es el cuerpo de mi página.</p>
     <button onclick="redirigir()">Ir a Cambio Climático</button>
 
-<script>
-function redirigir() {
-    // Esto hará que el navegador cargue el archivo cambioclimatico.html
-    window.location.href = "cambioclimatico.html";
-}
-</script>
+
 </body>
 </html>
