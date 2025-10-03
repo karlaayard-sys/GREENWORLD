@@ -54,7 +54,7 @@
 
             <!-- Título y Mensaje de Error/Información -->
             <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6">Examen de Certificación Único</h1>
-            <p class="text-center text-gray-500 mb-8">Para empezar, introduce tu nombre y correo. Puedes repetir el examen las veces que desees.</p>
+            <p class="text-center text-gray-500 mb-8">Para empezar, introduce tu nombre y correo.</p>
 
             <!-- Contenedor de Alerta/Mensaje -->
             <div id="messageBox" class="hidden p-4 mb-4 text-sm rounded-lg" role="alert"></div>
@@ -113,30 +113,29 @@
         // Establecer el nivel de log para depuración de Firestore
         setLogLevel('Debug');
 
-        // --- INSTRUCCIÓN IMPORTANTE PARA EJECUCIÓN FUERA DE CANVAS (GitHub/Local) ---
-        // Debes obtener estos valores de tu Consola de Firebase y reemplazarlos a continuación.
+        // --- CONFIGURACIÓN MANUAL DE FIREBASE (SOLO PARA DESARROLLO LOCAL) ---
+        // Si estos valores se usan, el guardado en Firestore fallará a menos que se reemplacen con claves reales.
         const MANUAL_FIREBASE_CONFIG = {
-            apiKey: "TU_API_KEY_AQUI", // REEMPLAZAR
-            authDomain: "TU_PROJECT_ID.firebaseapp.com", // REEMPLAZAR
-            projectId: "TU_PROJECT_ID_AQUI", // REEMPLAZAR
+            apiKey: "TU_API_KEY_AQUI", 
+            authDomain: "TU_PROJECT_ID.firebaseapp.com", 
+            projectId: "TU_PROJECT_ID_AQUI", 
             storageBucket: "...",
             messagingSenderId: "...",
             appId: "..."
         };
-        const MANUAL_APP_ID = "examen-certificacion"; // ID de la aplicación para la colección en Firestore (puedes dejar este valor)
-        // --------------------------------------------------------------------------
+        const MANUAL_APP_ID = "examen-certificacion"; 
+        // ----------------------------------------------------------------------
 
-        // Variables globales (si se ejecutan en Canvas, usan las variables de entorno; si no, usan el modo manual)
+        // Variables globales: Se prefieren las variables de entorno de Canvas.
         const appId = typeof __app_id !== 'undefined' ? __app_id : MANUAL_APP_ID;
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : MANUAL_FIREBASE_CONFIG;
-        
-        // FIX DE VERIFICACIÓN DE CUENTA: Corregido el nombre de la variable de entorno
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let app;
         let db;
         let auth;
         let currentUserId = 'anonymous';
+        let isFirebaseInitialized = false;
 
         // Constantes del DOM
         const startScreen = document.getElementById('startScreen');
@@ -155,7 +154,7 @@
         let userEmail = '';
         let examAttemptDocId = null;
         
-        // Banco de 50 preguntas para seleccionar 10 aleatoriamente
+        // Banco de 50 preguntas (reducido para brevedad en el archivo)
         const FULL_QUESTION_BANK = [
             { question: "¿Qué es una constante en una fórmula de Excel?", options: {A: "Un valor que cambia según la celda", B: "Un valor fijo que no depende de otras celdas", C: "Un operador lógico", D: "Una función automática"}, correctAnswer: "B" },
             { question: "¿Cuál de los siguientes es un operador aritmético en Excel?", options: {A: "&", B: "=", C: "+", D: "%"}, correctAnswer: "C" },
@@ -324,11 +323,12 @@
         // --- Funciones de Firebase ---
 
         async function initializeFirebase() {
-            // Verificar si la configuración es válida (API Key no es el placeholder)
+            // Verificar si la configuración es el placeholder y emitir una advertencia, no un error fatal
             if (firebaseConfig.apiKey === "TU_API_KEY_AQUI") {
-                console.error("Firebase config no está configurada. Usando el placeholder.");
-                showMessage('error', 'ERROR: Por favor, reemplaza "TU_API_KEY_AQUI" y "TU_PROJECT_ID_AQUI" con tus datos reales de Firebase en el código.');
-                return false;
+                console.warn("ADVERTENCIA: Usando configuración de Firebase de marcador de posición (placeholder). El guardado de datos fallará. Si estás fuera de Canvas, reemplaza tus claves.");
+                showMessage('info', 'Usando configuración de prueba. El guardado de datos en la nube no funcionará sin tus claves reales de Firebase.');
+                // Salir sin inicializar la base de datos si las claves son de placeholder
+                return false; 
             }
 
             try {
@@ -347,10 +347,10 @@
                     const unsubscribe = onAuthStateChanged(auth, (user) => {
                         if (user) {
                             currentUserId = user.uid;
+                            isFirebaseInitialized = true;
                             resolve();
                         } else {
                             console.error("No se pudo obtener un usuario autenticado.");
-                            showMessage('error', 'Error de autenticación. Intenta refrescar la página.');
                         }
                         unsubscribe();
                     });
@@ -359,8 +359,8 @@
 
             } catch (error) {
                 console.error("Error al inicializar o autenticar Firebase:", error);
-                // Si la configuración manual es incorrecta, capturamos el error aquí.
-                showMessage('error', `Error de inicio: Verifica tu configuración manual de Firebase. Detalle: ${error.message}`);
+                // Si falla la inicialización (p. ej. configuraciones incorrectas)
+                showMessage('error', `Error de inicio de Firebase: ${error.message}. La funcionalidad de guardado está deshabilitada.`);
                 return false;
             }
         }
@@ -371,27 +371,18 @@
         }
 
         /**
-         * Función simplificada. Solo verifica si existe el doc, pero NO bloquea si está 'completed'.
-         * Se mantiene para reutilizar el docId existente o crear uno nuevo basado en el email.
+         * Registra o actualiza el intento de examen en Firestore.
          */
-        async function checkExamAttempt(email) {
-            const q = query(getExamAttemptsCollectionRef(), where("email", "==", email));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                examAttemptDocId = querySnapshot.docs[0].id;
-                return { exists: true };
-            }
-            return { exists: false };
-        }
-
         async function recordExamAttempt(email, name, status, scoreData = {}) {
-            // Limpia el email para usarlo como una ID válida en Firestore
-            // Usaremos el ID del documento encontrado o generaremos uno basado en el email si no existe,
-            // pero siempre permitiremos la sobreescritura (merge: true)
-            const safeEmailId = email.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now(); // Generamos un ID único para permitir múltiples intentos
+            // Solo intentar guardar si Firebase se inicializó correctamente con claves válidas
+            if (!isFirebaseInitialized) {
+                console.warn("Firestore no inicializado con credenciales válidas. Omitiendo guardado.");
+                return;
+            }
+
+            const safeEmailId = email.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now(); 
+            const docIdToUse = safeEmailId; // Siempre usamos una ID única por intento
             
-            const docIdToUse = examAttemptDocId || safeEmailId;
             const newDocRef = doc(db, getExamAttemptsCollectionRef().path, docIdToUse);
 
             const attemptData = {
@@ -402,7 +393,7 @@
                 timestamp: new Date().toISOString(),
                 score: scoreData.score || 0,
                 totalQuestions: selectedQuestions.length,
-                percentage: scoreData.percentage ? scoreData.percentage.toFixed(0) : 0,
+                percentage: scoreData.percentage ? parseFloat(scoreData.percentage.toFixed(0)) : 0,
                 // Guardamos las preguntas seleccionadas para el PDF/registro si está completo
                 questions: status === 'completed' ? selectedQuestions.map(q => ({
                     q: q.question,
@@ -413,7 +404,7 @@
 
             try {
                 await setDoc(newDocRef, attemptData, { merge: true });
-                examAttemptDocId = docIdToUse; // Aseguramos que el ID se guarde para la siguiente fase (submit)
+                examAttemptDocId = docIdToUse; // Guardamos el ID del documento para referenciarlo en el PDF
             } catch (e) {
                 console.error("Error al registrar el intento:", e);
                 showMessage('error', 'Error al guardar el progreso del examen. Revisa las reglas de seguridad de Firestore.');
@@ -440,18 +431,14 @@
             toggleLoading(true);
 
             try {
-                // Aquí, originalmente, se hacía la validación de intento único.
-                // Como quieres permitir múltiples intentos, saltaremos esa verificación
-                // y simplemente reiniciaremos el proceso.
-                
                 // Reiniciar estado
                 currentQuestionIndex = 0;
                 userAnswers = {};
-                examAttemptDocId = null; // Reiniciar el ID del documento para crear uno nuevo
+                examAttemptDocId = null;
 
                 selectedQuestions = selectRandomQuestions(FULL_QUESTION_BANK, QUESTIONS_TO_SHOW);
                 
-                // Registramos el inicio del nuevo intento
+                // Registramos el inicio del nuevo intento (solo si Firebase está listo)
                 await recordExamAttempt(userEmail, userName, 'started');
                 
                 startScreen.classList.add('hidden');
@@ -462,11 +449,7 @@
                 
             } catch (e) {
                 console.error("Error en el inicio del examen:", e);
-                if (e.message.includes('No Firebase App')) {
-                    showMessage('error', 'ERROR: Firebase no está inicializado. Asegúrate de haber ingresado tus claves de configuración.');
-                } else {
-                    showMessage('error', 'Ocurrió un error al verificar tu cuenta. Por favor, revisa la consola.');
-                }
+                showMessage('error', 'Ocurrió un error al iniciar el examen. Por favor, revisa la consola.');
             } finally {
                 toggleLoading(false);
             }
@@ -528,7 +511,7 @@
             
             const scoreData = calculateScore();
             const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-            const requiredPercentage = 80;
+            const requiredPercentage = 80; // Mantenemos la lógica aquí
             const isApproved = scoreData.percentage >= requiredPercentage;
             const statusText = isApproved ? "APROBADO" : "REPROBADO";
 
@@ -568,19 +551,23 @@
 
             // Score Box
             doc.setDrawColor(0);
-            // FIX: Corregida la sintaxis del operador ternario para doc.setFillColor
+            
+            // FIX: Uso de if/else para setFillColor
             if (isApproved) {
-                doc.setFillColor(167, 243, 208); // Verde pálido
+                doc.setFillColor(167, 243, 208); // Verde pálido (RGB: 167, 243, 208)
             } else {
-                doc.setFillColor(254, 202, 202); // Rojo pálido
+                doc.setFillColor(254, 202, 202); // Rojo pálido (RGB: 254, 202, 202)
             }
+            
             doc.rect(50, y, 110, 30, 'F');
-            // FIX: Corregida la sintaxis del operador ternario para doc.setTextColor
+            
+            // FIX: Uso de if/else para setTextColor
             if (isApproved) {
-                doc.setTextColor(5, 150, 105); // Verde oscuro
+                doc.setTextColor(5, 150, 105); // Verde oscuro (RGB: 5, 150, 105)
             } else {
-                doc.setTextColor(185, 28, 28); // Rojo oscuro
+                doc.setTextColor(185, 28, 28); // Rojo oscuro (RGB: 185, 28, 28)
             }
+            
             doc.setFontSize(18);
             doc.text(`Estatus: ${statusText}`, 105, y + 10, null, null, "center");
             doc.setFontSize(26);
@@ -590,7 +577,11 @@
             // Agradecimiento
             doc.setFontSize(10);
             doc.setTextColor(156, 163, 175);
-            doc.text(`ID de Registro (para auditoría): ${examAttemptDocId}`, 105, 280, null, null, "center");
+            // Mostrar ID solo si se generó uno
+            const auditText = examAttemptDocId 
+                ? `ID de Registro (para auditoría): ${examAttemptDocId}` 
+                : 'ID de Registro: No disponible (Error al guardar en Firebase)';
+            doc.text(auditText, 105, 280, null, null, "center");
 
 
             doc.save(`Certificado_${userName.replace(/\s/g, '_')}.pdf`);
@@ -602,5 +593,6 @@
 
     </script>
 </body>
+</html>
 </html>
 
