@@ -38,6 +38,10 @@
             border-color: #4f46e5;
             background-color: #4f46e5;
         }
+        /* Clase para el contador de tiempo */
+        #timerDisplay {
+            transition: color 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -54,7 +58,7 @@
 
             <!-- Título y Mensaje de Error/Información -->
             <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6">Examen de Certificación Único</h1>
-            <p class="text-center text-gray-500 mb-8">Para empezar, introduce tu nombre y correo. Puedes repetir el examen las veces que desees.</p>
+            <p class="text-center text-gray-500 mb-8">Tienes **45 segundos** para responder cada pregunta. ¡Mucha suerte!</p>
 
             <!-- Contenedor de Alerta/Mensaje -->
             <div id="messageBox" class="hidden p-4 mb-4 text-sm rounded-lg" role="alert"></div>
@@ -76,6 +80,7 @@
 
             <!-- 2. Pantalla del Examen -->
             <div id="quizScreen" class="hidden">
+                <div id="timerDisplay" class="text-center text-3xl font-extrabold mb-6 text-indigo-600"></div>
                 <div id="questionContainer">
                     <!-- Las preguntas se inyectarán aquí -->
                 </div>
@@ -146,6 +151,13 @@
         const emailInput = document.getElementById('emailInput');
         const messageBox = document.getElementById('messageBox');
         const loadingOverlay = document.getElementById('loadingOverlay');
+        const timerDisplay = document.getElementById('timerDisplay');
+
+        // --- ESTADO Y CONSTANTES DEL TEMPORIZADOR ---
+        const TIME_PER_QUESTION_SECONDS = 45; 
+        let timerSeconds = TIME_PER_QUESTION_SECONDS;
+        let timerInterval = null;
+        // -------------------------------------------
 
         // Estado del examen
         let currentQuestionIndex = 0;
@@ -253,7 +265,67 @@
             loadingOverlay.classList.toggle('hidden', !show);
         }
 
+        // --- Funciones del Temporizador ---
+        
+        function clearTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function handleTimerExpiration() {
+            clearTimer();
+            // Si el usuario no ha respondido, registramos la respuesta como nula
+            if (!userAnswers[currentQuestionIndex]) {
+                userAnswers[currentQuestionIndex] = 'NO_ANSWER';
+            }
+            
+            showMessage('error', `¡Tiempo agotado! La pregunta ${currentQuestionIndex + 1} se ha registrado como NO RESPONDIDA.`);
+            
+            // Mover automáticamente a la siguiente pregunta o finalizar
+            if (currentQuestionIndex < selectedQuestions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+            } else {
+                submitExam();
+            }
+        }
+
+        function startTimer() {
+            clearTimer();
+            timerSeconds = TIME_PER_QUESTION_SECONDS;
+            
+            const updateTimerDisplay = () => {
+                timerDisplay.textContent = `Tiempo restante: ${timerSeconds}s`;
+                // Cambiar color cuando quedan pocos segundos
+                if (timerSeconds <= 10) {
+                    timerDisplay.classList.remove('text-indigo-600');
+                    timerDisplay.classList.add('text-red-600');
+                } else {
+                    timerDisplay.classList.remove('text-red-600');
+                    timerDisplay.classList.add('text-indigo-600');
+                }
+            };
+
+            updateTimerDisplay(); // Mostrar tiempo inicial
+            
+            timerInterval = setInterval(() => {
+                timerSeconds--;
+                updateTimerDisplay();
+
+                if (timerSeconds <= 0) {
+                    handleTimerExpiration();
+                }
+            }, 1000);
+        }
+
+        // --- Renderizado y Navegación ---
+
         function renderQuestion() {
+            clearTimer(); // Limpiar el temporizador anterior
+            startTimer(); // Iniciar nuevo temporizador
+            
             hideMessage();
             if (currentQuestionIndex >= selectedQuestions.length) {
                 return;
@@ -395,9 +467,10 @@
                 totalQuestions: selectedQuestions.length,
                 percentage: scoreData.percentage ? parseFloat(scoreData.percentage.toFixed(0)) : 0,
                 // Guardamos las preguntas seleccionadas para el PDF/registro si está completo
-                questions: status === 'completed' ? selectedQuestions.map(q => ({
+                questions: status === 'completed' ? selectedQuestions.map((q, index) => ({
                     q: q.question,
-                    a: userAnswers[selectedQuestions.indexOf(q)],
+                    // Si la respuesta es 'NO_ANSWER', la guardamos como nula o no respondida
+                    a: userAnswers[index] === 'NO_ANSWER' ? null : userAnswers[index], 
                     c: q.correctAnswer
                 })) : null
             };
@@ -458,7 +531,9 @@
         function calculateScore() {
             let correctCount = 0;
             selectedQuestions.forEach((q, index) => {
-                if (userAnswers[index] === q.correctAnswer) {
+                const answer = userAnswers[index];
+                // Solo cuenta si hay respuesta Y es correcta
+                if (answer && answer !== 'NO_ANSWER' && answer === q.correctAnswer) { 
                     correctCount++;
                 }
             });
@@ -467,9 +542,15 @@
         }
 
         window.submitExam = async () => {
+            clearTimer(); // Asegurar que el temporizador se detenga
+
             if (Object.keys(userAnswers).length !== selectedQuestions.length) {
-                showMessage('error', 'Por favor, responde todas las preguntas antes de finalizar.');
-                return;
+                // Si faltan preguntas, es porque el tiempo se agotó en la última, 
+                // pero si se llama desde el botón, lo verificamos:
+                if (currentQuestionIndex < selectedQuestions.length - 1) {
+                     showMessage('error', 'Por favor, responde todas las preguntas antes de finalizar.');
+                     return;
+                }
             }
 
             toggleLoading(true);
@@ -594,4 +675,5 @@
     </script>
 </body>
 </html>
+
 
