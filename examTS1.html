@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examen con Límite de Tiempo y Acceso Único</title>
+    <!-- Incluir Tailwind CSS para estilos modernos y responsivos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos base y fuente */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        .question-card {
+            min-height: 400px; /* Altura mínima para evitar saltos de layout */
+        }
+    </style>
+    
+    <!-- Importación de jsPDF para generar el comprobante -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Importaciones de Firebase (como módulo) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Establecer el nivel de log para depuración (opcional)
+        setLogLevel('Debug');
+
+        // Variables globales proporcionadas por el entorno
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let db;
+        let auth;
+        let userData = {}; 
+        let selectedQuestions = [];
+        
+        // Estado de la navegación del examen y temporizador
+        let currentQuestionIndex = 0;
+        let timerTimeout = null;
+        let countdownInterval = null;
+        let userSelections = {}; // { index: selectedValue }
+
+        // CONSTANTE DE TIEMPO: 45 segundos
+        const TIME_PER_QUESTION = 45; 
+
+        // BANCO DE PREGUNTAS (50 preguntas según el usuario)
+        const questionBank = [
+            { question: "¿Qué representa una prueba de significación en el análisis de datos sociales?", options: ["Una forma de medir la cantidad de datos recolectados", "Una forma de organizar encuestas", "Una técnica para validar si una diferencia observada es real o producto del azar", "Un método para calcular promedios"], answer: "Una técnica para validar si una diferencia observada es real o producto del azar" },
+            { question: "En trabajo social, ¿cuál sería un ejemplo de hipótesis que puede probarse con datos?", options: ["El acceso a becas mejora la permanencia escolar en zonas vulnerables", "La pobreza es un problema global", "Los jóvenes prefieren redes sociales", "Los adultos mayores necesitan atención médica"], answer: "El acceso a becas mejora la permanencia escolar en zonas vulnerables" },
+            { question: "¿Qué significa un valor p menor a $0.05$ en una prueba de significación?", options: ["Que la diferencia observada es probablemente significativa", "Que se debe repetir el estudio", "Que los datos son incorrectos", "Que no hay relación entre variables"], answer: "Que la diferencia observada es probablemente significativa" },
+            { question: "¿Cuál es el objetivo de una prueba no paramétrica en trabajo social?", options: ["Calcular la media de ingresos", "Determinar el tamaño de la muestra", "Medir la edad promedio de una comunidad", "Analizar datos que no siguen una distribución normal"], answer: "Analizar datos que no siguen una distribución normal" },
+            { question: "¿Qué tipo de variable se analiza con pruebas de nivel nominal?", options: ["Edad", "Número de hijos", "Ingreso mensual", "Género"], answer: "Género" },
+            { question: "¿Cuál de las siguientes variables es de nivel ordinal?", options: ["Nivel educativo (primaria, secundaria, universidad)", "Color favorito", "Número de teléfono", "Tipo de discapacidad"], answer: "Nivel educativo (primaria, secundaria, universidad)" },
+            { question: "¿Qué representa la probabilidad en el contexto de pruebas estadísticas?", options: ["La frecuencia con la que se repite un dato", "El número total de participantes", "La certeza de que un evento ocurrirá", "La posibilidad de que un resultado ocurra por azar"], answer: "La posibilidad de que un resultado ocurra por azar" },
+            { question: "¿Cuál es una ventaja de usar pruebas no paramétricas en estudios sociales?", options: ["Son más precisas con datos ordinales o nominales", "No necesitan hipótesis", "Evitan el uso de computadoras", "Requieren menos participantes"], answer: "Son más precisas con datos ordinales o nominales" },
+            { question: "¿Qué prueba se usaría para comparar la satisfacción de usuarios entre dos centros comunitarios?", options: ["Prueba de correlación", "Prueba de regresión lineal", "Prueba de varianza", "Prueba de Chi-cuadrado"], answer: "Prueba de Chi-cuadrado" },
+            { question: "¿Qué indica una diferencia significativa entre dos grupos en un estudio social?", options: ["Que los grupos son iguales", "Que se debe usar una prueba paramétrica", "Que los datos son inválidos", "Que hay una relación estadística entre las variables"], answer: "Que hay una relación estadística entre las variables" },
+            { question: "¿Cuál es el propósito principal de una prueba de significación en investigación social?", options: ["Confirmar que los datos son confiables", "Determinar si una diferencia observada es estadísticamente relevante", "Calcular el promedio de respuestas", "Clasificar los tipos de encuestas"], answer: "Determinar si una diferencia observada es estadísticamente relevante" },
+            { question: "¿Qué elemento se necesita para realizar una prueba de significación?", options: ["Una hipótesis nula", "Un gráfico de barras", "Una entrevista", "Un mapa de calor"], answer: "Una hipótesis nula" },
+            { question: "¿Qué representa la hipótesis alternativa en una prueba estadística?", options: ["Que no hay diferencia entre grupos", "Que los datos son inválidos", "Que existe una diferencia significativa", "Que se debe repetir el estudio"], answer: "Que existe una diferencia significativa" },
+            { question: "¿Cuál sería una hipótesis nula en un estudio sobre violencia familiar?", options: ["La violencia familiar afecta el rendimiento escolar", "No hay relación entre violencia familiar y rendimiento escolar", "La violencia familiar es común", "El rendimiento escolar depende del género"], answer: "No hay relación entre violencia familiar y rendimiento escolar" },
+            { question: "¿Qué se busca rechazar en una prueba de significación?", options: ["La hipótesis alternativa", "La hipótesis nula", "Los datos recolectados", "El análisis descriptivo"], answer: "La hipótesis nula" },
+            { question: "¿Qué representa un valor p en una prueba estadística?", options: ["El número de participantes", "La probabilidad de que los resultados sean producto del azar", "El promedio de respuestas", "El tipo de variable"], answer: "La probabilidad de que los resultados sean producto del azar" },
+            { question: "¿Qué significa un valor p mayor a $0.05$?", options: ["Que hay una diferencia significativa", "Que se rechaza la hipótesis nula", "Que no se puede afirmar una diferencia estadística", "Que los datos son inválidos"], answer: "Que no se puede afirmar una diferencia estadística" },
+            { question: "¿En qué contexto se usa la probabilidad en trabajo social?", options: ["Para calcular el número de encuestas", "Para estimar la posibilidad de que un fenómeno ocurra", "Para clasificar tipos de violencia", "Para medir la edad promedio"], answer: "Para estimar la posibilidad de que un fenómeno ocurra" },
+            { question: "¿Qué implica una probabilidad del $90\\%$ en un estudio de intervención social?", options: ["Que los resultados son poco confiables", "Que hay alta certeza de que el efecto observado es real", "Que se debe repetir el estudio", "Que los datos son nominales"], answer: "Que hay alta certeza de que el efecto observado es real" },
+            { question: "¿Cuál es el nivel de significación más común en estudios sociales?", options: ["$0.10$", "$0.05$", "$0.50$", "$0.01$"], answer: "$0.05$" },
+            { question: "¿Qué caracteriza a las pruebas no paramétricas?", options: ["Requieren datos con distribución normal", "Se aplican a datos categóricos u ordinales", "Solo se usan en física", "No permiten comparar grupos"], answer: "Se aplican a datos categóricos u ordinales" },
+            { question: "¿Cuál es una prueba no paramétrica común en trabajo social?", options: ["ANOVA", "Regresión lineal", "Chi-cuadrado", "T de Student"], answer: "Chi-cuadrado" },
+            { question: "¿Cuándo se recomienda usar una prueba no paramétrica?", options: ["Cuando los datos son numéricos y normales", "Cuando los datos son ordinales o nominales", "Cuando hay más de 100 participantes", "Cuando se usa Excel"], answer: "Cuando los datos son ordinales o nominales" },
+            { question: "¿Qué tipo de datos se analizan con la prueba de Chi-cuadrado?", options: ["Datos continuos", "Datos categóricos", "Datos con decimales", "Datos de tiempo"], answer: "Datos categóricos" },
+            { question: "¿Qué permite identificar una prueba de Mann-Whitney en trabajo social?", options: ["Diferencias entre dos grupos ordinales", "Correlaciones entre variables", "Promedios de ingresos", "Tipos de violencia"], answer: "Diferencias entre dos grupos ordinales" },
+            { question: "¿Cuál es una variable nominal en estudios sociales?", options: ["Edad", "Género", "Nivel educativo", "Puntaje en test"], answer: "Género" },
+            { question: "¿Qué tipo de variable es 'nivel de satisfacción' (bajo, medio, alto)?", options: ["Nominal", "Ordinal", "Continua", "Binaria"], answer: "Ordinal" },
+            { question: "¿Qué prueba se usa para comparar respuestas de tipo 'sí' o 'no'?", options: ["Prueba t", "Prueba de Chi-cuadrado", "Regresión", "ANOVA"], answer: "Prueba de Chi-cuadrado" },
+            { question: "¿Qué tipo de análisis se aplica a variables ordinales en encuestas sociales?", options: ["Media aritmética", "Prueba de rangos", "Desviación estándar", "Histograma"], answer: "Prueba de rangos" },
+            { question: "¿Qué representa una escala de Likert en trabajo social?", options: ["Una forma de medir ingresos", "Una escala ordinal para medir actitudes", "Un tipo de entrevista", "Un gráfico de barras"], answer: "Una escala ordinal para medir actitudes" },
+            { question: "¿Qué tipo de prueba usarías para analizar si el tipo de vivienda está relacionado con el acceso a servicios sociales?", options: ["Prueba t", "Prueba de Chi-cuadrado", "Regresión lineal", "Prueba de rangos"], answer: "Prueba de Chi-cuadrado" },
+            { question: "¿Qué representa una diferencia significativa en el acceso a salud entre comunidades rurales y urbanas?", options: ["Que los datos son iguales", "Que hay una relación estadística entre el tipo de comunidad y el acceso", "Que se debe usar una escala de Likert", "Que no se puede analizar"], answer: "Que hay una relación estadística entre el tipo de comunidad y el acceso" },
+            { question: "¿Qué variable sería nominal en un estudio sobre discriminación laboral?", options: ["Edad", "Género", "Años de experiencia", "Nivel de ingresos"], answer: "Género" },
+            { question: "¿Qué tipo de variable es 'frecuencia de participación en actividades comunitarias' (nunca, a veces, siempre)?", options: ["Nominal", "Ordinal", "Continua", "Binaria"], answer: "Ordinal" },
+            { question: "¿Qué prueba usarías para comparar niveles de satisfacción entre tres programas sociales?", options: ["Prueba de rangos de Kruskal-Wallis", "Prueba t", "Regresión", "Prueba de correlación"], answer: "Prueba de rangos de Kruskal-Wallis" },
+            { question: "¿Qué representa un valor p de $0.01$ en un estudio sobre violencia de género?", options: ["Alta probabilidad de que los resultados sean producto del azar", "Alta significación estadística", "Datos inválidos", "Falta de correlación"], answer: "Alta significación estadística" },
+            { question: "¿Qué tipo de prueba usarías para analizar si el nivel educativo influye en la percepción de justicia social?", options: ["Prueba de Chi-cuadrado", "Prueba t", "Regresión logística", "Prueba de correlación"], answer: "Prueba de Chi-cuadrado" },
+            { question: "¿Qué representa una prueba de Wilcoxon en trabajo social?", options: ["Comparación de promedios", "Comparación de rangos entre dos grupos relacionados", "Análisis de varianza", "Cálculo de frecuencias"], answer: "Comparación de rangos entre dos grupos relacionados" },
+            { question: "¿Qué tipo de variable es 'tipo de discapacidad' en un estudio de inclusión educativa?", options: ["Nominal", "Ordinal", "Continua", "Binaria"], answer: "Nominal" },
+            { question: "¿Qué representa una correlación positiva entre autoestima y participación comunitaria?", options: ["Que ambas variables disminuyen", "Que no hay relación", "Que al aumentar una, también aumenta la otra", "Que se deben usar pruebas nominales"], answer: "Que al aumentar una, también aumenta la otra" },
+            { question: "¿Qué implica no rechazar la hipótesis nula en un estudio social?", options: ["Que hay una diferencia significativa", "Que no se encontró evidencia estadística suficiente", "Que los datos son inválidos", "Que se debe repetir el estudio"], answer: "Que no se encontró evidencia estadística suficiente" },
+            { question: "¿Qué tipo de prueba usarías para comparar la percepción de seguridad entre hombres y mujeres?", options: ["Prueba de Chi-cuadrado", "Prueba t", "Regresión", "Prueba de Wilcoxon"], answer: "Prueba de Chi-cuadrado" },
+            { question: "¿Qué representa una prueba de Spearman en trabajo social?", options: ["Correlación entre variables ordinales", "Comparación de medias", "Análisis de frecuencias", "Cálculo de probabilidades"], answer: "Correlación entre variables ordinales" },
+            { question: "¿Qué tipo de variable es 'estado civil' en un estudio sobre acceso a vivienda?", options: ["Nominal", "Ordinal", "Continua", "Binaria"], answer: "Nominal" },
+            { question: "¿Qué representa una diferencia no significativa en un estudio sobre abandono escolar?", options: ["Que los datos son erróneos", "Que no hay evidencia estadística de diferencia", "Que se debe usar otra prueba", "Que el fenómeno no existe"], answer: "Que no hay evidencia estadística de diferencia" },
+            { question: "¿Qué prueba usarías para analizar si el tipo de empleo está relacionado con el estrés laboral?", options: ["Prueba de Chi-cuadrado", "Prueba t", "Regresión lineal", "Prueba de rangos"], answer: "Prueba de Chi-cuadrado" },
+            { question: "¿Qué representa una escala ordinal en encuestas de bienestar emocional?", options: ["Clasificación sin orden", "Medición con orden lógico", "Datos numéricos", "Datos binarios"], answer: "Medición con orden lógico" },
+            { question: "¿Qué tipo de prueba usarías para comparar el nivel de satisfacción antes y después de una intervención social?", options: ["Prueba de Wilcoxon", "Prueba de Chi-cuadrado", "Prueba t", "Prueba de correlación"], answer: "Prueba de Wilcoxon" },
+            { question: "¿Qué representa un valor p de $0.20$ en un estudio sobre percepción de equidad?", options: ["Alta significación", "Baja probabilidad de error", "No hay evidencia estadística suficiente", "Datos inválidos"], answer: "No hay evidencia estadística suficiente" },
+            { question: "¿Qué tipo de variable es 'preferencia por tipo de ayuda' (económica, psicológica, educativa)?", options: ["Nominal", "Ordinal", "Continua", "Binaria"], answer: "Nominal" }
+        ];
+
+        // Acceso global a jsPDF.jsPDF
+        const { jsPDF } = window.jspdf;
+
+
+        /**
+         * Inicializa Firebase y la autenticación
+         */
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                showMessage("Firebase y Autenticación listos. Ingrese sus datos para comenzar.", 'info');
+            } catch (error) {
+                showMessage("Error al inicializar Firebase: " + error.message, 'error');
+            }
+        }
+
+        /**
+         * Maneja el formulario de inicio de sesión y verifica el correo en Firestore
+         */
+        async function handleLogin(event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('student-name');
+            const emailInput = document.getElementById('student-email');
+            const loginFormSubmit = document.getElementById('login-form-submit');
+            
+            loginFormSubmit.disabled = true;
+            loginFormSubmit.textContent = "Verificando...";
+
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim().toLowerCase();
+
+            if (!name || !email) {
+                showMessage("Por favor, ingrese su nombre y correo electrónico.", 'error');
+                loginFormSubmit.disabled = false;
+                loginFormSubmit.textContent = "Verificar y Continuar";
+                return;
+            }
+
+            userData.name = name;
+            userData.email = email;
+
+            const attemptsCollectionPath = `artifacts/${appId}/public/data/exam_attempts`;
+            // Usamos el email como ID del documento
+            const attemptDocRef = doc(db, attemptsCollectionPath, email);
+
+            try {
+                showMessage("Verificando si ya realizó el examen...", 'info');
+                const docSnap = await getDoc(attemptDocRef);
+
+                if (docSnap.exists()) {
+                    // El correo ya existe, bloquear intento.
+                    showMessage(`El correo electrónico **${email}** ya ha sido utilizado para realizar este examen. No puede volver a intentarlo.`, 'error');
+                    document.getElementById('start-exam-button').disabled = true;
+                } else {
+                    // Correo no encontrado, puede tomar el examen.
+                    showMessage(`Verificación exitosa. ¡Mucha suerte, **${name}**! Tiene ${TIME_PER_QUESTION} segundos por pregunta.`, 'success');
+                    document.getElementById('start-exam-button').disabled = false;
+                    nameInput.disabled = true;
+                    emailInput.disabled = true;
+                    loginFormSubmit.classList.add('hidden');
+                    document.getElementById('start-exam-button').classList.remove('hidden');
+                }
+            } catch (error) {
+                showMessage(`Error al verificar el examen. Por favor, intente de nuevo.`, 'error');
+                console.error("Error checking exam attempt:", error);
+            } finally {
+                loginFormSubmit.disabled = false;
+                loginFormSubmit.textContent = "Verificar y Continuar";
+            }
+        }
+
+        /**
+         * Selecciona 'count' preguntas aleatorias de 'bank'
+         */
+        function selectRandomQuestions(bank, count) {
+            const shuffled = [...bank].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+
+        /**
+         * Inicia el examen
+         */
+        function startExam() {
+            // 1. Seleccionar 10 preguntas al azar
+            selectedQuestions = selectRandomQuestions(questionBank, 10);
+            
+            // 2. Ocultar login y mostrar examen
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('exam-screen').classList.remove('hidden');
+
+            // 3. Iniciar la primera pregunta
+            currentQuestionIndex = 0;
+            renderSingleQuestion();
+        }
+
+        /**
+         * Renderiza la pregunta actual y comienza el temporizador
+         */
+        function renderSingleQuestion() {
+            // Detener y limpiar cualquier temporizador previo
+            clearTimeout(timerTimeout);
+            clearInterval(countdownInterval);
+            
+            if (currentQuestionIndex >= selectedQuestions.length) {
+                submitExam();
+                return;
+            }
+
+            const q = selectedQuestions[currentQuestionIndex];
+            const container = document.getElementById('questions-container');
+            
+            // 1. Renderizar la pregunta
+            container.innerHTML = `
+                <div class="question-card bg-white p-6 rounded-xl shadow-lg mb-6 border border-gray-200">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
+                        <p class="font-bold text-xl text-indigo-700">Pregunta ${currentQuestionIndex + 1} de ${selectedQuestions.length}</p>
+                        <div id="timer-display" class="text-xl font-extrabold text-red-600 bg-red-100 px-3 py-1 rounded-full">
+                            ${TIME_PER_QUESTION}s
+                        </div>
+                    </div>
+                    
+                    <p class="text-gray-800 text-lg mb-6">${q.question}</p>
+                    
+                    <div id="options-q${currentQuestionIndex}">
+                        ${q.options.map(option => `
+                            <label class="block mb-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-indigo-50 transition duration-150">
+                                <input type="radio" name="current-question" value="${option}" 
+                                    ${userSelections[currentQuestionIndex] === option ? 'checked' : ''}
+                                    class="mr-3 text-indigo-600 focus:ring-indigo-500"
+                                    onchange="window.recordSelection(this.value, ${currentQuestionIndex})">
+                                ${option}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <button onclick="window.nextQuestion()" id="next-button" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200 shadow-md">
+                    Siguiente Pregunta
+                </button>
+            `;
+
+            // 2. Iniciar el temporizador
+            startTimer();
+        }
+
+        /**
+         * Inicia el temporizador de 45 segundos
+         */
+        function startTimer() {
+            let timeLeft = TIME_PER_QUESTION;
+            const timerDisplay = document.getElementById('timer-display');
+
+            // Intervalo para actualizar el contador
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `${timeLeft}s`;
+                if (timeLeft <= 10) {
+                    timerDisplay.classList.remove('text-red-600', 'bg-red-100');
+                    timerDisplay.classList.add('text-yellow-700', 'bg-yellow-100');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+
+            // Timeout para pasar automáticamente a la siguiente pregunta
+            timerTimeout = setTimeout(() => {
+                showMessage(`Tiempo agotado para la pregunta ${currentQuestionIndex + 1}.`, 'error');
+                nextQuestion();
+            }, TIME_PER_QUESTION * 1000);
+        }
+
+        /**
+         * Registra la selección del usuario
+         */
+        function recordSelection(value, index) {
+            userSelections[index] = value;
+        }
+
+        /**
+         * Pasa a la siguiente pregunta o finaliza el examen
+         */
+        function nextQuestion() {
+            // Detener el temporizador inmediatamente
+            clearTimeout(timerTimeout);
+            clearInterval(countdownInterval);
+
+            currentQuestionIndex++;
+            renderSingleQuestion();
+        }
+
+        /**
+         * Maneja la sumisión del examen: calcula puntaje, guarda y muestra resultados
+         */
+        async function submitExam() {
+            const submitButton = document.getElementById('next-button');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = "Calculando...";
+            }
+            showMessage("Calculando resultados y guardando intento...", 'info');
+
+            // 1. Calcular el puntaje
+            let score = 0;
+            const totalQuestions = selectedQuestions.length;
+            
+            selectedQuestions.forEach((q, index) => {
+                const selectedValue = userSelections[index];
+                if (selectedValue && selectedValue === q.answer) {
+                    score++;
+                }
+            });
+
+            const percentage = ((score / totalQuestions) * 100).toFixed(0);
+
+            // 2. Guardar el resultado en Firestore para evitar re-intentos
+            try {
+                const attemptsCollectionPath = `artifacts/${appId}/public/data/exam_attempts`;
+                const attemptDocRef = doc(db, attemptsCollectionPath, userData.email);
+
+                const attemptData = {
+                    name: userData.name,
+                    email: userData.email,
+                    score: score,
+                    totalQuestions: totalQuestions,
+                    percentage: percentage,
+                    timestamp: new Date().toISOString(),
+                    userId: auth.currentUser.uid
+                };
+
+                await setDoc(attemptDocRef, attemptData);
+                console.log("Resultado del examen guardado en Firestore.");
+
+                // 3. Mostrar resultados y PDF
+                showResults(score, totalQuestions, percentage);
+
+            } catch (error) {
+                showMessage(`Error al guardar el resultado del examen: ${error.message}. Por favor, contacte al administrador.`, 'error');
+                console.error("Error saving exam attempt:", error);
+            }
+        }
+
+        /**
+         * Muestra la pantalla de resultados y genera el PDF
+         */
+        function showResults(score, totalQuestions, percentage) {
+            document.getElementById('exam-screen').classList.add('hidden');
+            document.getElementById('results-screen').classList.remove('hidden');
+
+            const scoreDisplay = document.getElementById('final-score');
+            const gradeText = percentage >= 70 ? '¡Aprobado! 🎉' : 'No Aprobado 😔';
+            const gradeColor = percentage >= 70 ? 'text-green-600' : 'text-red-600';
+
+            scoreDisplay.innerHTML = `
+                <p class="text-3xl font-bold mb-4">¡Examen Completado, ${userData.name}!</p>
+                <p class="text-xl mb-2">Correo: <span class="font-medium text-gray-600">${userData.email}</span></p>
+                <p class="text-xl mb-6">Puntuación Final: <span class="font-extrabold text-indigo-700">${score}</span> de ${totalQuestions}</p>
+                <p class="text-5xl font-extrabold ${gradeColor}">${percentage}%</p>
+                <p class="text-2xl mt-4 font-semibold">${gradeText}</p>
+            `;
+
+            // FIX: Exportar la calificación a variables globales para que el botón de descarga manual funcione.
+            window.finalScore = score;
+            window.finalPercentage = percentage;
+            window.finalTotalQuestions = totalQuestions;
+
+            showMessage("Su resultado ha sido guardado. Descargue su comprobante.", 'success');
+            
+            // Generar el PDF automáticamente
+            generatePDF(userData.name, userData.email, percentage, score, totalQuestions);
+        }
+
+        /**
+         * Genera y descarga el PDF con los resultados
+         * FIX: Se corrigió la inicialización de jsPDF y se agregó el correo electrónico.
+         */
+        function generatePDF(name, email, percentage, score, total) {
+            // Inicialización de jsPDF (importada globalmente)
+            const doc = new jsPDF(); 
+
+            const title = "Certificado de Calificación del Examen";
+            const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            // Título
+            doc.setFontSize(24);
+            doc.setTextColor(50, 60, 160);
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+
+            // Línea separadora
+            doc.setDrawColor(50, 60, 160);
+            doc.line(20, 35, 190, 35);
+
+            let currentY = 50;
+
+            // Información del Alumno - Nombre
+            doc.setFontSize(14);
+            doc.setTextColor(50, 50, 50);
+            doc.text("Nombre del Estudiante:", 20, currentY);
+            currentY += 10;
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0);
+            doc.text(name, 20, currentY);
+            currentY += 15;
+
+            // Información del Alumno - Correo
+            doc.setFontSize(14);
+            doc.setTextColor(50, 50, 50);
+            doc.text("Correo Electrónico:", 20, currentY);
+            currentY += 10;
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0);
+            doc.text(email, 20, currentY);
+            currentY += 15;
+
+            // Información del Alumno - Fecha
+            doc.setFontSize(14);
+            doc.setTextColor(50, 50, 50);
+            doc.text("Fecha de Realización:", 20, currentY);
+            currentY += 10;
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0);
+            doc.text(date, 20, currentY);
+            currentY += 20;
+
+            // Calificación (resaltada)
+            doc.setDrawColor(50, 60, 160);
+            doc.setFillColor(235, 240, 255);
+            doc.rect(50, currentY, 110, 35, 'F'); // Recuadro para el puntaje
+
+            doc.setFontSize(18);
+            doc.setTextColor(50, 50, 50);
+            doc.text("CALIFICACIÓN FINAL", 105, currentY + 8, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.setTextColor(50, 50, 50);
+            doc.text(`Puntaje: ${score}/${total}`, 105, currentY + 17, { align: 'center' });
+
+
+            doc.setFontSize(36);
+            const scoreColor = percentage >= 70 ? [0, 128, 0] : [200, 0, 0]; 
+            doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+            doc.text(`${percentage}%`, 105, currentY + 30, { align: 'center' });
+            
+            // Pie de página
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            doc.text("Este documento certifica la finalización del examen y su resultado. Acceso único por correo electrónico.", 105, 280, { align: 'center' });
+
+            const filename = `Calificacion_${name.replace(/\s+/g, '_')}_${percentage}%.pdf`;
+            doc.save(filename);
+        }
+
+        /**
+         * Función para mostrar mensajes de estado
+         */
+        function showMessage(text, type) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800', 'bg-blue-100', 'text-blue-800', 'border-red-400', 'border-green-400', 'border-blue-400', 'bg-yellow-100', 'text-yellow-800', 'border-yellow-400');
+            
+            let classes = '';
+            if (type === 'error') {
+                classes = 'bg-red-100 text-red-800 border-red-400';
+            } else if (type === 'success') {
+                classes = 'bg-green-100 text-green-800 border-green-400';
+            } else {
+                classes = 'bg-blue-100 text-blue-800 border-blue-400';
+            }
+
+            messageBox.className = `p-4 mt-6 mb-6 rounded-lg border text-sm ${classes}`;
+            messageBox.innerHTML = text;
+        }
+
+        // Inicializar Firebase al cargar la ventana
+        window.onload = initializeFirebase;
+
+        // Exportar funciones para que sean accesibles desde el HTML
+        window.handleLogin = handleLogin;
+        window.startExam = startExam;
+        window.nextQuestion = nextQuestion;
+        window.recordSelection = recordSelection;
+        window.generatePDF = generatePDF; 
+        window.userData = userData; 
+        // Las variables finalScore, finalPercentage y finalTotalQuestions se crean en showResults
+        
+    </script>
+</head>
+<body class="min-h-screen flex items-start justify-center p-4 sm:p-8">
+    
+    <div class="w-full max-w-2xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-indigo-800">Examen de Pruebas de Significancia y Variables</h1>
+            <p class="text-gray-500 mt-2 font-semibold">Solo 10 preguntas al azar. Restricción de 45 segundos por pregunta. Acceso único por correo.</p>
+        </header>
+
+        <!-- Mensajes de Estado (Global) -->
+        <div id="message-box" class="p-4 mt-6 mb-6 rounded-lg border text-sm bg-blue-100 text-blue-800 border-blue-400">
+            Cargando...
+        </div>
+
+        <!-- 1. PANTALLA DE INICIO DE SESIÓN / VERIFICACIÓN -->
+        <div id="login-screen" class="bg-white p-8 rounded-xl shadow-2xl transition-all duration-300 border border-gray-100">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Identificación del Alumno</h2>
+            
+            <form id="login-form" onsubmit="window.handleLogin(event)">
+                <div class="mb-4">
+                    <label for="student-name" class="block text-sm font-medium text-gray-700 mb-2">Nombre Completo:</label>
+                    <input type="text" id="student-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="mb-6">
+                    <label for="student-email" class="block text-sm font-medium text-gray-700 mb-2">Correo Electrónico (será su ID único):</label>
+                    <input type="email" id="student-email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150" placeholder="ejemplo@dominio.com">
+                </div>
+                <button type="submit" id="login-form-submit" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200 shadow-md disabled:bg-indigo-400">
+                    Verificar y Continuar
+                </button>
+            </form>
+
+            <button onclick="window.startExam()" id="start-exam-button" disabled class="hidden w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200 mt-4 shadow-md disabled:bg-gray-400">
+                Iniciar Examen Ahora
+            </button>
+        </div>
+
+        <!-- 2. PANTALLA DEL EXAMEN (pregunta por pregunta) -->
+        <div id="exam-screen" class="hidden transition-all duration-300">
+            <h2 class="text-3xl font-bold mb-8 text-indigo-700 text-center">Responda Rápidamente</h2>
+            
+            <div id="questions-container" class="space-y-6">
+                <!-- La pregunta actual se inyectará aquí por JavaScript -->
+            </div>
+
+        </div>
+
+        <!-- 3. PANTALLA DE RESULTADOS -->
+        <div id="results-screen" class="hidden bg-white p-8 rounded-xl shadow-2xl text-center transition-all duration-300 border border-gray-100">
+            <div id="final-score" class="mb-8">
+                <!-- El resultado se inyectará aquí, incluyendo el correo -->
+            </div>
+            
+            <p class="text-gray-600 mb-6">Su intento ha sido registrado. Haga clic para descargar su comprobante de calificación.</p>
+            
+            <!-- FIX: El botón ahora usa las variables globales definidas en showResults (window.finalTotalQuestions) -->
+            <button onclick="window.generatePDF(window.userData.name, window.userData.email, window.finalPercentage, window.finalScore, window.finalTotalQuestions)" class="bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200 shadow-md">
+                Descargar Comprobante PDF
+            </button>
+        </div>
+    </div>
+</body>
+</html>
