@@ -105,10 +105,23 @@
         // Establecer el nivel de log para depuración de Firestore
         setLogLevel('Debug');
 
-        // Variables globales (proporcionadas por el entorno Canvas/GitHub)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-exam-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // --- INSTRUCCIÓN IMPORTANTE PARA EJECUCIÓN FUERA DE CANVAS (GitHub/Local) ---
+        // Debes obtener estos valores de tu Consola de Firebase y reemplazarlos a continuación.
+        const MANUAL_FIREBASE_CONFIG = {
+            apiKey: "TU_API_KEY_AQUI", // REEMPLAZAR
+            authDomain: "TU_PROJECT_ID.firebaseapp.com", // REEMPLAZAR
+            projectId: "TU_PROJECT_ID_AQUI", // REEMPLAZAR
+            storageBucket: "...",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+        const MANUAL_APP_ID = "examen-certificacion"; // ID de la aplicación para la colección en Firestore (puedes dejar este valor)
+        // --------------------------------------------------------------------------
+
+        // Variables globales (si se ejecutan en Canvas, usan las variables de entorno; si no, usan el modo manual)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : MANUAL_APP_ID;
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : MANUAL_FIREBASE_CONFIG;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initialAuthToken : null;
 
         let app;
         let db;
@@ -120,19 +133,19 @@
         const quizScreen = document.getElementById('quizScreen');
         const resultScreen = document.getElementById('resultScreen');
         const questionContainer = document.getElementById('questionContainer');
-        const nameInput = document.getElementById('nameInput'); // Nuevo Input de Nombre
+        const nameInput = document.getElementById('nameInput'); 
         const emailInput = document.getElementById('emailInput');
         const messageBox = document.getElementById('messageBox');
         const loadingOverlay = document.getElementById('loadingOverlay');
 
         // Estado del examen
         let currentQuestionIndex = 0;
-        let userAnswers = {}; // { 0: 'A', 1: 'C', ... }
-        let userName = ''; // Nuevo estado para el Nombre
+        let userAnswers = {}; 
+        let userName = ''; 
         let userEmail = '';
         let examAttemptDocId = null;
         
-        // ** CAMBIO CLAVE: Lógica para seleccionar 10 preguntas aleatorias de 50 **
+        // Banco de 50 preguntas para seleccionar 10 aleatoriamente
         const FULL_QUESTION_BANK = [
             { question: "¿Qué es una constante en una fórmula de Excel?", options: {A: "Un valor que cambia según la celda", B: "Un valor fijo que no depende de otras celdas", C: "Un operador lógico", D: "Una función automática"}, correctAnswer: "B" },
             { question: "¿Cuál de los siguientes es un operador aritmético en Excel?", options: {A: "&", B: "=", C: "+", D: "%"}, correctAnswer: "C" },
@@ -186,8 +199,8 @@
             { question: "¿Qué representa la fórmula =SI(B2=\"Activo\",SI(C2>100,\"Alta producción\",\"Media producción\"),\"Inactivo\")?", options: {A: "Función de búsqueda", B: "Función anidada con doble condición", C: "Función de suma", D: "Función de filtro"}, correctAnswer: "B" }
         ];
         
-        const QUESTIONS_TO_SHOW = 10; // Mostrar 10 preguntas aleatorias
-        let selectedQuestions = []; // Array para las 10 preguntas seleccionadas
+        const QUESTIONS_TO_SHOW = 10; 
+        let selectedQuestions = []; 
 
         /**
          * Selecciona un número fijo de preguntas aleatorias del banco.
@@ -199,16 +212,13 @@
             
             // Algoritmo de muestreo aleatorio
             const shuffled = [...bank]
-                .map(value => ({ value, sort: Math.random() })) // Asignar un valor aleatorio
-                .sort((a, b) => a.sort - b.sort) // Ordenar
-                .map(({ value }) => value); // Obtener solo los objetos
+                .map(value => ({ value, sort: Math.random() })) 
+                .sort((a, b) => a.sort - b.sort) 
+                .map(({ value }) => value); 
 
-            return shuffled.slice(0, count); // Tomar las primeras 'count' preguntas
+            return shuffled.slice(0, count); 
         }
-        // Fin de la lógica de selección aleatoria
         
-
-
         // --- Funciones de Utilidad y UI ---
 
         function showMessage(type, message) {
@@ -302,16 +312,19 @@
         // --- Funciones de Firestore ---
 
         async function initializeFirebase() {
-            if (!firebaseConfig) {
-                console.error("Firebase config no está disponible.");
-                showMessage('error', 'Error: La configuración de Firebase no está disponible.');
+            // Verificar si la configuración es válida (API Key no es el placeholder)
+            if (firebaseConfig.apiKey === "TU_API_KEY_AQUI") {
+                console.error("Firebase config no está configurada. Usando el placeholder.");
+                showMessage('error', 'ERROR: Por favor, reemplaza "TU_API_KEY_AQUI" y "TU_PROJECT_ID_AQUI" con tus datos reales de Firebase en el código.');
                 return false;
             }
+
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
+                // Si no hay token de entorno, inicia sesión anónimamente
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
@@ -334,16 +347,24 @@
 
             } catch (error) {
                 console.error("Error al inicializar o autenticar Firebase:", error);
-                showMessage('error', `Error de inicio de sesión: ${error.message}.`);
+                // Si la configuración manual es incorrecta, capturamos el error aquí.
+                showMessage('error', `Error de inicio: Verifica tu configuración manual de Firebase. Detalle: ${error.message}`);
                 return false;
             }
         }
 
         function getExamAttemptsCollectionRef() {
+            // Se usa el path público para que todos los usuarios puedan revisar si un email ya existe
             return collection(db, `artifacts/${appId}/public/data/exam_attempts`);
         }
 
+        /**
+         * Verifica si el email ya existe y si el intento ya fue completado.
+         * @param {string} email - Correo del usuario.
+         * @returns {Promise<{exists: boolean, finished: boolean}>}
+         */
         async function checkExamAttempt(email) {
+            // Usamos una query para buscar por email
             const q = query(getExamAttemptsCollectionRef(), where("email", "==", email));
             const querySnapshot = await getDocs(q);
 
@@ -353,14 +374,18 @@
 
             const docData = querySnapshot.docs[0].data();
             examAttemptDocId = querySnapshot.docs[0].id;
+            
+            // LA LÓGICA CLAVE: Retorna true si el estado es 'completed'
             return { exists: true, finished: docData.status === 'completed' };
         }
 
         async function recordExamAttempt(email, name, status) {
             const { score, total, percentage } = calculateScore();
+            // Limpia el email para usarlo como una ID válida en Firestore
+            const safeEmailId = email.replace(/[^a-zA-Z0-9]/g, '_');
 
             const attemptData = {
-                name: name, // Guardar el nombre
+                name: name, 
                 email: email,
                 userId: currentUserId,
                 status: status, // 'started' o 'completed'
@@ -371,18 +396,15 @@
             };
 
             try {
-                if (examAttemptDocId) {
-                    await setDoc(doc(db, getExamAttemptsCollectionRef().path, examAttemptDocId), attemptData, { merge: true });
-                } else {
-                    // Crea un nuevo documento, usando el email como ID si es la primera vez (para facilitar el query)
-                    const newDocRef = doc(db, getExamAttemptsCollectionRef().path, email);
-                    await setDoc(newDocRef, attemptData);
-                    examAttemptDocId = email; // Usamos el email como ID del documento
-                }
-                console.log(`Intento registrado/actualizado: ${status}`);
+                // Si ya teníamos una ID de intento (por checkExamAttempt o intento previo), actualizamos
+                const docIdToUse = examAttemptDocId || safeEmailId;
+                const newDocRef = doc(db, getExamAttemptsCollectionRef().path, docIdToUse);
+                
+                await setDoc(newDocRef, attemptData, { merge: true });
+                examAttemptDocId = docIdToUse; // Aseguramos que el ID se guarde para futuras actualizaciones/PDF
             } catch (e) {
                 console.error("Error al registrar el intento:", e);
-                showMessage('error', 'Error al guardar el progreso del examen.');
+                showMessage('error', 'Error al guardar el progreso del examen. Revisa las reglas de seguridad de Firestore.');
             }
         }
 
@@ -390,7 +412,7 @@
         // --- Flujo Principal del Examen ---
 
         window.startExam = async () => {
-            userName = nameInput.value.trim(); // Obtener el nombre
+            userName = nameInput.value.trim(); 
             userEmail = emailInput.value.trim();
             hideMessage();
 
@@ -406,18 +428,19 @@
             toggleLoading(true);
 
             try {
+                // PASO CLAVE DE VERIFICACIÓN
                 const attempt = await checkExamAttempt(userEmail);
 
                 if (attempt.exists && attempt.finished) {
+                    // Si existe y ya está COMPLETED, bloqueamos el acceso.
                     showMessage('error', `Ya has completado el examen con el correo **${userEmail}**. No se permite repetirlo.`);
                     startScreen.classList.remove('hidden');
                     quizScreen.classList.add('hidden');
                     resultScreen.classList.add('hidden');
                 } else {
-                    // Seleccionar las preguntas aleatorias
+                    // Si es nuevo o está START, procedemos a iniciar.
                     selectedQuestions = selectRandomQuestions(FULL_QUESTION_BANK, QUESTIONS_TO_SHOW);
                     
-                    // Registrar inicio de examen
                     await recordExamAttempt(userEmail, userName, 'started');
                     
                     startScreen.classList.add('hidden');
@@ -429,7 +452,11 @@
                 }
             } catch (e) {
                 console.error("Error en el inicio del examen:", e);
-                showMessage('error', 'Ocurrió un error al verificar tu cuenta. Por favor, revisa la consola.');
+                if (e.message.includes('No Firebase App')) {
+                    showMessage('error', 'ERROR: Firebase no está inicializado. Asegúrate de haber ingresado tus claves de configuración.');
+                } else {
+                    showMessage('error', 'Ocurrió un error al verificar tu cuenta. Por favor, revisa la consola.');
+                }
             } finally {
                 toggleLoading(false);
             }
@@ -456,7 +483,7 @@
 
             const { score, total, percentage } = calculateScore();
 
-            // 1. Guardar el resultado en Firestore
+            // 1. Guardar el resultado en Firestore y establecer el estado en 'completed'
             await recordExamAttempt(userEmail, userName, 'completed');
 
             // 2. Mostrar la pantalla de resultados
@@ -474,7 +501,7 @@
             toggleLoading(false);
         };
 
-        // --- Función de Generación de PDF (Corregida y Mejorada con Nombre) ---
+        // --- Función de Generación de PDF ---
 
         window.generatePDF = () => {
             if (!window.jspdf || !window.jspdf.jsPDF) {
