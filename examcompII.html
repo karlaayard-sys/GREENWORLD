@@ -30,6 +30,14 @@
             align-items: center;
             z-index: 1000;
         }
+        /* Estilo para marcar la opción seleccionada */
+        input[type="radio"]:checked + span {
+            font-weight: 600; /* Semi-bold */
+        }
+        input[type="radio"]:checked {
+            border-color: #4f46e5;
+            background-color: #4f46e5;
+        }
     </style>
 </head>
 <body>
@@ -46,7 +54,7 @@
 
             <!-- Título y Mensaje de Error/Información -->
             <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6">Examen de Certificación Único</h1>
-            <p class="text-center text-gray-500 mb-8">Para empezar, introduce tu nombre y correo. El examen solo se puede completar una vez por cuenta.</p>
+            <p class="text-center text-gray-500 mb-8">Para empezar, introduce tu nombre y correo. Puedes repetir el examen las veces que desees.</p>
 
             <!-- Contenedor de Alerta/Mensaje -->
             <div id="messageBox" class="hidden p-4 mb-4 text-sm rounded-lg" role="alert"></div>
@@ -89,7 +97,7 @@
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Descargar Certificado PDF
                 </button>
-                <p class="text-xs text-gray-400 mt-4">Tu resultado ha sido registrado y no podrás repetir el examen con este correo.</p>
+                <button onclick="location.reload()" class="mt-4 block w-full text-indigo-600 border border-indigo-600 hover:bg-indigo-50 px-4 py-2 rounded-lg transition duration-150 font-medium">Hacer otro intento</button>
             </div>
 
         </div>
@@ -121,7 +129,9 @@
         // Variables globales (si se ejecutan en Canvas, usan las variables de entorno; si no, usan el modo manual)
         const appId = typeof __app_id !== 'undefined' ? __app_id : MANUAL_APP_ID;
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : MANUAL_FIREBASE_CONFIG;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initialAuthToken : null;
+        
+        // FIX DE VERIFICACIÓN DE CUENTA: Corregido el nombre de la variable de entorno
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let app;
         let db;
@@ -133,15 +143,15 @@
         const quizScreen = document.getElementById('quizScreen');
         const resultScreen = document.getElementById('resultScreen');
         const questionContainer = document.getElementById('questionContainer');
-        const nameInput = document.getElementById('nameInput'); 
+        const nameInput = document.getElementById('nameInput');
         const emailInput = document.getElementById('emailInput');
         const messageBox = document.getElementById('messageBox');
         const loadingOverlay = document.getElementById('loadingOverlay');
 
         // Estado del examen
         let currentQuestionIndex = 0;
-        let userAnswers = {}; 
-        let userName = ''; 
+        let userAnswers = {};
+        let userName = '';
         let userEmail = '';
         let examAttemptDocId = null;
         
@@ -199,24 +209,24 @@
             { question: "¿Qué representa la fórmula =SI(B2=\"Activo\",SI(C2>100,\"Alta producción\",\"Media producción\"),\"Inactivo\")?", options: {A: "Función de búsqueda", B: "Función anidada con doble condición", C: "Función de suma", D: "Función de filtro"}, correctAnswer: "B" }
         ];
         
-        const QUESTIONS_TO_SHOW = 10; 
-        let selectedQuestions = []; 
+        const QUESTIONS_TO_SHOW = 10;
+        let selectedQuestions = [];
 
         /**
          * Selecciona un número fijo de preguntas aleatorias del banco.
          */
         function selectRandomQuestions(bank, count) {
             if (bank.length <= count) {
-                return [...bank]; 
+                return [...bank];
             }
             
             // Algoritmo de muestreo aleatorio
             const shuffled = [...bank]
-                .map(value => ({ value, sort: Math.random() })) 
-                .sort((a, b) => a.sort - b.sort) 
-                .map(({ value }) => value); 
+                .map(value => ({ value, sort: Math.random() }))
+                .sort((a, b) => a.sort - b.sort)
+                .map(({ value }) => value);
 
-            return shuffled.slice(0, count); 
+            return shuffled.slice(0, count);
         }
         
         // --- Funciones de Utilidad y UI ---
@@ -260,7 +270,7 @@
                     </p>
                     <div id="optionsGroup" class="space-y-4">
                         ${Object.entries(q.options).map(([key, value]) => `
-                            <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition duration-150 hover:bg-indigo-50 has-checked:bg-indigo-100 has-checked:border-indigo-500">
+                            <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer transition duration-150 hover:bg-indigo-50 ${userAnswers[currentQuestionIndex] === key ? 'bg-indigo-100 border-indigo-500' : ''}">
                                 <input 
                                     type="radio" 
                                     name="question_${currentQuestionIndex}" 
@@ -287,6 +297,8 @@
 
         window.handleAnswerChange = (index, answer) => {
             userAnswers[index] = answer;
+            // Para refrescar el estilo de selección de la opción.
+            renderQuestion(); 
         };
 
         window.prevQuestion = () => {
@@ -309,7 +321,7 @@
         };
 
 
-        // --- Funciones de Firestore ---
+        // --- Funciones de Firebase ---
 
         async function initializeFirebase() {
             // Verificar si la configuración es válida (API Key no es el placeholder)
@@ -359,49 +371,49 @@
         }
 
         /**
-         * Verifica si el email ya existe y si el intento ya fue completado.
-         * @param {string} email - Correo del usuario.
-         * @returns {Promise<{exists: boolean, finished: boolean}>}
+         * Función simplificada. Solo verifica si existe el doc, pero NO bloquea si está 'completed'.
+         * Se mantiene para reutilizar el docId existente o crear uno nuevo basado en el email.
          */
         async function checkExamAttempt(email) {
-            // Usamos una query para buscar por email
             const q = query(getExamAttemptsCollectionRef(), where("email", "==", email));
             const querySnapshot = await getDocs(q);
 
-            if (querySnapshot.empty) {
-                return { exists: false, finished: false };
+            if (!querySnapshot.empty) {
+                examAttemptDocId = querySnapshot.docs[0].id;
+                return { exists: true };
             }
-
-            const docData = querySnapshot.docs[0].data();
-            examAttemptDocId = querySnapshot.docs[0].id;
-            
-            // LA LÓGICA CLAVE: Retorna true si el estado es 'completed'
-            return { exists: true, finished: docData.status === 'completed' };
+            return { exists: false };
         }
 
-        async function recordExamAttempt(email, name, status) {
-            const { score, total, percentage } = calculateScore();
+        async function recordExamAttempt(email, name, status, scoreData = {}) {
             // Limpia el email para usarlo como una ID válida en Firestore
-            const safeEmailId = email.replace(/[^a-zA-Z0-9]/g, '_');
+            // Usaremos el ID del documento encontrado o generaremos uno basado en el email si no existe,
+            // pero siempre permitiremos la sobreescritura (merge: true)
+            const safeEmailId = email.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Date.now(); // Generamos un ID único para permitir múltiples intentos
+            
+            const docIdToUse = examAttemptDocId || safeEmailId;
+            const newDocRef = doc(db, getExamAttemptsCollectionRef().path, docIdToUse);
 
             const attemptData = {
-                name: name, 
+                name: name,
                 email: email,
                 userId: currentUserId,
                 status: status, // 'started' o 'completed'
                 timestamp: new Date().toISOString(),
-                score: status === 'completed' ? score : 0,
+                score: scoreData.score || 0,
                 totalQuestions: selectedQuestions.length,
-                percentage: status === 'completed' ? percentage.toFixed(0) : 0,
+                percentage: scoreData.percentage ? scoreData.percentage.toFixed(0) : 0,
+                // Guardamos las preguntas seleccionadas para el PDF/registro si está completo
+                questions: status === 'completed' ? selectedQuestions.map(q => ({
+                    q: q.question,
+                    a: userAnswers[selectedQuestions.indexOf(q)],
+                    c: q.correctAnswer
+                })) : null
             };
 
             try {
-                // Si ya teníamos una ID de intento (por checkExamAttempt o intento previo), actualizamos
-                const docIdToUse = examAttemptDocId || safeEmailId;
-                const newDocRef = doc(db, getExamAttemptsCollectionRef().path, docIdToUse);
-                
                 await setDoc(newDocRef, attemptData, { merge: true });
-                examAttemptDocId = docIdToUse; // Aseguramos que el ID se guarde para futuras actualizaciones/PDF
+                examAttemptDocId = docIdToUse; // Aseguramos que el ID se guarde para la siguiente fase (submit)
             } catch (e) {
                 console.error("Error al registrar el intento:", e);
                 showMessage('error', 'Error al guardar el progreso del examen. Revisa las reglas de seguridad de Firestore.');
@@ -412,7 +424,7 @@
         // --- Flujo Principal del Examen ---
 
         window.startExam = async () => {
-            userName = nameInput.value.trim(); 
+            userName = nameInput.value.trim();
             userEmail = emailInput.value.trim();
             hideMessage();
 
@@ -428,28 +440,26 @@
             toggleLoading(true);
 
             try {
-                // PASO CLAVE DE VERIFICACIÓN
-                const attempt = await checkExamAttempt(userEmail);
+                // Aquí, originalmente, se hacía la validación de intento único.
+                // Como quieres permitir múltiples intentos, saltaremos esa verificación
+                // y simplemente reiniciaremos el proceso.
+                
+                // Reiniciar estado
+                currentQuestionIndex = 0;
+                userAnswers = {};
+                examAttemptDocId = null; // Reiniciar el ID del documento para crear uno nuevo
 
-                if (attempt.exists && attempt.finished) {
-                    // Si existe y ya está COMPLETED, bloqueamos el acceso.
-                    showMessage('error', `Ya has completado el examen con el correo **${userEmail}**. No se permite repetirlo.`);
-                    startScreen.classList.remove('hidden');
-                    quizScreen.classList.add('hidden');
-                    resultScreen.classList.add('hidden');
-                } else {
-                    // Si es nuevo o está START, procedemos a iniciar.
-                    selectedQuestions = selectRandomQuestions(FULL_QUESTION_BANK, QUESTIONS_TO_SHOW);
-                    
-                    await recordExamAttempt(userEmail, userName, 'started');
-                    
-                    startScreen.classList.add('hidden');
-                    quizScreen.classList.remove('hidden');
-                    resultScreen.classList.add('hidden');
-                    
-                    currentQuestionIndex = 0;
-                    renderQuestion();
-                }
+                selectedQuestions = selectRandomQuestions(FULL_QUESTION_BANK, QUESTIONS_TO_SHOW);
+                
+                // Registramos el inicio del nuevo intento
+                await recordExamAttempt(userEmail, userName, 'started');
+                
+                startScreen.classList.add('hidden');
+                quizScreen.classList.remove('hidden');
+                resultScreen.classList.add('hidden');
+                
+                renderQuestion();
+                
             } catch (e) {
                 console.error("Error en el inicio del examen:", e);
                 if (e.message.includes('No Firebase App')) {
@@ -475,151 +485,122 @@
 
         window.submitExam = async () => {
             if (Object.keys(userAnswers).length !== selectedQuestions.length) {
-                showMessage('error', 'Debes responder todas las preguntas antes de finalizar.');
+                showMessage('error', 'Por favor, responde todas las preguntas antes de finalizar.');
                 return;
             }
-            
+
             toggleLoading(true);
+            const scoreData = calculateScore();
 
-            const { score, total, percentage } = calculateScore();
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            const messageStatus = document.getElementById('messageStatus');
+            const requiredPercentage = 80; // Puedes cambiar el porcentaje de aprobación
 
-            // 1. Guardar el resultado en Firestore y establecer el estado en 'completed'
-            await recordExamAttempt(userEmail, userName, 'completed');
+            scoreDisplay.textContent = `${scoreData.percentage.toFixed(0)}%`;
 
-            // 2. Mostrar la pantalla de resultados
-            document.getElementById('scoreDisplay').textContent = `${score} / ${total}`;
-            document.getElementById('messageStatus').textContent = `Hola ${userName}, tu puntuación es del ${percentage.toFixed(0)}%.`;
-            
-            if (percentage >= 70) {
-                 document.getElementById('messageStatus').textContent += ' ¡Felicidades, has aprobado!';
+            if (scoreData.percentage >= requiredPercentage) {
+                messageStatus.innerHTML = `¡Felicidades, ${userName}! Has **APROBADO** la certificación con ${scoreData.score} de ${scoreData.total} respuestas correctas.`;
+                scoreDisplay.classList.remove('text-red-600');
+                scoreDisplay.classList.add('text-indigo-600');
             } else {
-                document.getElementById('messageStatus').textContent += ' Necesitas estudiar un poco más.';
+                messageStatus.innerHTML = `Lo sentimos, ${userName}. Has **REPROBADO** la certificación con ${scoreData.score} de ${scoreData.total} respuestas correctas. Necesitas ${requiredPercentage}% para aprobar.`;
+                scoreDisplay.classList.remove('text-indigo-600');
+                scoreDisplay.classList.add('text-red-600');
             }
 
-            quizScreen.classList.add('hidden');
-            resultScreen.classList.remove('hidden');
-            toggleLoading(false);
+            try {
+                // Registrar el resultado final como 'completed'
+                await recordExamAttempt(userEmail, userName, 'completed', scoreData);
+            } catch (error) {
+                console.error("Error al registrar el intento final:", error);
+                showMessage('error', 'Error crítico al guardar el resultado. Revisa la consola.');
+            } finally {
+                quizScreen.classList.add('hidden');
+                resultScreen.classList.remove('hidden');
+                toggleLoading(false);
+            }
         };
-
-        // --- Función de Generación de PDF ---
 
         window.generatePDF = () => {
-            if (!window.jspdf || !window.jspdf.jsPDF) {
-                showMessage('error', 'Error: Librería jsPDF no cargada correctamente.');
-                return;
-            }
-
-            const { score, total, percentage } = calculateScore();
-            const doc = new window.jspdf.jsPDF();
+            toggleLoading(true);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
-            const pageWidth = doc.internal.pageSize.getWidth();
-            let y = 30;
+            const scoreData = calculateScore();
+            const date = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            const requiredPercentage = 80;
+            const isApproved = scoreData.percentage >= requiredPercentage;
+            const statusText = isApproved ? "APROBADO" : "REPROBADO";
+
+            let y = 20;
 
             // Título
-            doc.setFont('helvetica', 'bold');
             doc.setFontSize(24);
-            doc.setTextColor(26, 35, 126); 
-            doc.text("Certificado de Resultados del Examen", pageWidth / 2, y, { align: 'center' });
+            doc.setTextColor(79, 70, 229); // Índigo
+            doc.text("Certificado de Acreditación", 105, y, null, null, "center");
             y += 15;
-            
+
             // Línea separadora
-            doc.setDrawColor(26, 35, 126);
-            doc.line(20, y, pageWidth - 20, y);
+            doc.setDrawColor(79, 70, 229);
+            doc.line(20, y, 190, y);
             y += 10;
 
-            // Información del Participante
-            doc.setFont('helvetica', 'normal');
+            // Nombre y Email
             doc.setFontSize(14);
-            doc.setTextColor(55, 65, 81); 
-            
-            // Nombre Completo
-            doc.setFont('helvetica', 'bold');
-            doc.text("Nombre Completo:", 20, y);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(0, 0, 0);
-            doc.text(userName, 70, y);
-            y += 10;
-            
-            // Correo
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(55, 65, 81);
-            doc.text("Correo Electrónico:", 20, y);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(0, 0, 0);
-            doc.text(userEmail, 70, y);
-            y += 10;
-            
-            // Fecha
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(55, 65, 81);
-            doc.text("Fecha de Finalización:", 20, y);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(0, 0, 0);
-            doc.text(new Date().toLocaleDateString('es-ES'), 70, y);
-            y += 20;
-
-            // Resultados (Resaltados)
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.setTextColor(26, 35, 126); 
-            doc.text("Puntuación Final", pageWidth / 2, y, { align: 'center' });
-            y += 10;
-            
-            // Caja para el Porcentaje
-            doc.setDrawColor(200, 200, 200);
-            doc.setFillColor(235, 245, 255);
-            doc.roundedRect(pageWidth / 2 - 40, y - 5, 80, 25, 5, 5, 'F');
-            
-            const scoreColor = percentage >= 70 ? [27, 94, 32] : [183, 28, 28]; // Verde o Rojo
-            doc.setFontSize(28);
-            doc.setTextColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-            doc.text(`${percentage.toFixed(0)}%`, pageWidth / 2, y + 10, { align: 'center' });
-            y += 25;
-
-            doc.setFontSize(14);
-            doc.setTextColor(55, 65, 81);
-            doc.text(`Respuestas Correctas: ${score} de ${total}`, pageWidth / 2, y, { align: 'center' });
-            y += 15;
-            
-            // Estado de Aprobación
-            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(55, 65, 81); // Gris Oscuro
+            doc.text("Certifica que:", 20, y);
+            y += 8;
             doc.setFontSize(20);
-            
-            if (percentage >= 70) {
-                doc.setTextColor(27, 94, 32); 
-                doc.text("ESTADO: APROBADO", pageWidth / 2, y, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
+            doc.text(userName.toUpperCase(), 105, y, null, null, "center");
+            y += 12;
+            doc.setFontSize(12);
+            doc.text(`Correo: ${userEmail}`, 105, y, null, null, "center");
+            y += 15;
+
+            // Resultados
+            doc.setFontSize(14);
+            doc.setTextColor(55, 65, 81);
+            doc.text("Ha completado el Examen Único de Certificación de Habilidades de Excel.", 105, y, null, null, "center");
+            y += 8;
+            doc.text(`Fecha de finalización: ${date}`, 105, y, null, null, "center");
+            y += 15;
+
+            // Score Box
+            doc.setDrawColor(0);
+            // FIX: Corregida la sintaxis del operador ternario para doc.setFillColor
+            if (isApproved) {
+                doc.setFillColor(167, 243, 208); // Verde pálido
             } else {
-                doc.setTextColor(183, 28, 28); 
-                doc.text("ESTADO: NO APROBADO", pageWidth / 2, y, { align: 'center' });
+                doc.setFillColor(254, 202, 202); // Rojo pálido
             }
-            y += 20;
+            doc.rect(50, y, 110, 30, 'F');
+            // FIX: Corregida la sintaxis del operador ternario para doc.setTextColor
+            if (isApproved) {
+                doc.setTextColor(5, 150, 105); // Verde oscuro
+            } else {
+                doc.setTextColor(185, 28, 28); // Rojo oscuro
+            }
+            doc.setFontSize(18);
+            doc.text(`Estatus: ${statusText}`, 105, y + 10, null, null, "center");
+            doc.setFontSize(26);
+            doc.text(`Puntaje: ${scoreData.percentage.toFixed(0)}%`, 105, y + 23, null, null, "center");
+            y += 40;
 
-            // Pie de página
+            // Agradecimiento
             doc.setFontSize(10);
-            doc.setTextColor(150, 150, 150);
-            doc.text(`ID del Intento: ${examAttemptDocId || 'N/A'}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 25, { align: 'center' });
-            doc.text("Documento generado automáticamente. Validez sujeta a la verificación en la plataforma.", pageWidth / 2, doc.internal.pageSize.getHeight() - 15, { align: 'center' });
-
-            // Nombrar el archivo con el nombre del usuario
-            const filename = `Certificado_${userName.replace(/\s+/g, '_')}.pdf`;
-            doc.save(filename);
-        };
+            doc.setTextColor(156, 163, 175);
+            doc.text(`ID de Registro (para auditoría): ${examAttemptDocId}`, 105, 280, null, null, "center");
 
 
-        // --- Inicialización al Cargar la Ventana ---
-
-        window.onload = async () => {
-            toggleLoading(true);
-            const isFirebaseReady = await initializeFirebase();
-            
-            if (isFirebaseReady) {
-                startScreen.classList.remove('hidden');
-                quizScreen.classList.add('hidden');
-                resultScreen.classList.add('hidden');
-            }
+            doc.save(`Certificado_${userName.replace(/\s/g, '_')}.pdf`);
             toggleLoading(false);
         };
-    </script>
+        
+        // Inicializar Firebase al cargar el script
+        initializeFirebase();
 
+    </script>
 </body>
 </html>
+
