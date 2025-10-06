@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingeniería de Prompts y Entornos IA Full-Stack</title>
+    <!-- Carga de Tailwind CSS para un diseño moderno y responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Usamos la fuente Inter para una estética moderna */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.5s;
+        }
+        /* Estilos específicos para la presentación */
+        .slide {
+            height: calc(100vh - 80px); /* Ocupa casi toda la altura visible */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+        }
+        .reveal-point {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            padding: 1rem 0; /* Espaciado para el listado */
+            border-bottom: 1px solid rgba(113, 128, 150, 0.2); /* Separador sutil */
+        }
+        .reveal-point:last-child {
+            border-bottom: none;
+        }
+        .reveal-point.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+
+    <!-- Contenedor Principal de la Presentación -->
+    <div id="presentation-container" class="relative w-full max-w-7xl mx-auto shadow-2xl rounded-lg overflow-hidden mt-4">
+
+        <!-- Contenedor de la Diapositiva -->
+        <div id="slide-content" class="slide">
+            <!-- El contenido de la diapositiva se inyectará aquí -->
+            <div id="slide-inner-content"></div>
+        </div>
+
+        <!-- Barra de Navegación/Progreso -->
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-gray-800 shadow-lg flex justify-between items-center z-10">
+            <button id="prev-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 disabled:opacity-50" disabled>
+                ← Anterior
+            </button>
+
+            <div class="flex-1 mx-8 h-2 bg-gray-700 rounded-full">
+                <div id="progress-bar" class="h-2 bg-teal-400 rounded-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+            
+            <!-- Ahora el contador inicial es 1/10 -->
+            <span id="slide-counter" class="text-sm text-gray-400 font-semibold w-24">1 / 10</span>
+            
+            <button id="next-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                Siguiente →
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Array con el contenido de cada diapositiva
+        const slides = [
+            // SLIDE 1: Título (Index 0)
+            { 
+                title: "Ingeniería de Prompts y Entornos IA Full-Stack",
+                subtitle: "Convirtiendo la Ambigüedad en Aplicaciones Robustas",
+                content: [],
+                className: "bg-gradient-to-br from-gray-900 to-gray-700",
+                isTitle: true
+            },
+            // SLIDE 2: ¿Qué es la Ingeniería de Prompts? (Index 1)
+            {
+                title: "¿Qué es la Ingeniería de Prompts?",
+                subtitle: "La Disciplina de la Comunicación con la IA",
+                content: [
+                    "La ingeniería de prompts es el arte de **diseñar instrucciones precisas** para que modelos de IA (LLMs) generen resultados útiles.",
+                    "Convierte la **Ambigüedad Natural** del lenguaje humano en una **Instrucción Clara** que guía al modelo.",
+                    "Objetivo clave: Obtener el **Resultado Útil** esperado, optimizando la interacción y reduciendo el ensayo y error."
+                ],
+                className: "bg-gray-800",
+                interactiveTitle: "Haz clic para revelar la definición clave"
+            },
+            // SLIDE 3: Elementos de un Prompt Efectivo (Index 2)
+            {
+                title: "Estructura Base de un Prompt Efectivo",
+                subtitle: "Los 4 Elementos Fundamentales",
+                content: [
+                    "**1. Rol/Persona:** Asigna una identidad al modelo (Ej: 'Actúa como un experto en finanzas...').",
+                    "**2. Tarea:** Especifica claramente la acción a realizar (Ej: 'Resume el siguiente texto en 3 puntos.').",
+                    "**3. Contexto:** Proporciona toda la información relevante que necesita (Ej: 'El texto es sobre la historia de la IA...').",
+                    "**4. Formato de Salida:** Define la estructura esperada (Ej: 'La respuesta debe ser una lista numerada en formato JSON.')."
+                ],
+                className: "bg-gray-900",
+                interactiveTitle: "Haz clic para ver los componentes"
+            },
+            // SLIDE 4: Técnicas Avanzadas (Index 3)
+            {
+                title: "Técnicas Clave de Prompting",
+                subtitle: "Mejorando la Calidad y el Razonamiento",
+                content: [
+                    "**Few-Shot:** Incluir 2-3 ejemplos de entrada-salida en el prompt para enseñar el patrón deseado.",
+                    "**Chain-of-Thought (CoT):** Pedir a la IA que *muestre su razonamiento* antes de la respuesta final ('Piensa paso a paso antes de responder.').",
+                    "**RAG (Retrieval-Augmented Generation):** El modelo usa datos externos (Bases de Datos Vectoriales) para fundamentar su respuesta, evitando alucinaciones."
+                ],
+                className: "bg-gray-800",
+                interactiveTitle: "Haz clic para ver las técnicas"
+            },
+            // SLIDE 5: Entornos Full-Stack IA (Index 4)
+            {
+                title: "Entornos Full-Stack IA",
+                subtitle: "De la Idea a la Aplicación Escalable",
+                content: [
+                    "Un sistema completo que integra modelos de IA (LLMs) con **backends robustos**, **bases de datos** (SQL, NoSQL, Vectoriales) y **UI/UX** para el usuario final.",
+                    "Herramientas Clave: Frameworks de Orquestación como **LangChain** o **LlamaIndex**.",
+                    "Propósito: Mover la funcionalidad de la IA de una interfaz de chat a una aplicación de negocio productiva y confiable."
+                ],
+                className: "bg-gray-700",
+                interactiveTitle: "Haz clic para definir el entorno Full-Stack IA"
+            },
+            // SLIDE 6: Criterios de Decisión (Index 5)
+            {
+                title: "Criterios para Elegir tu Entorno IA",
+                subtitle: "Priorizando la Implementación",
+                content: [
+                    "**Volumen y Usuarios:** Estimar el tráfico y la necesidad de datos privados (Cloud vs. On-Premise).",
+                    "**Presupuesto y Skill:** Equilibrar costos de APIs (GPT-4, Claude) con las capacidades del equipo técnico.",
+                    "**Cumplimiento y SLA:** Revisar regulaciones (GDPR, HIPAA) y los acuerdos de nivel de servicio (SLA).",
+                    "**Flexibilidad y Soporte:** Validar la curva de aprendizaje, documentación y comunidad del framework elegido."
+                ],
+                className: "bg-gray-800",
+                interactiveTitle: "Haz clic para ver los criterios"
+            },
+            // SLIDE 7: Pipeline de Despliegue (Index 6)
+            {
+                title: "Pipeline de Despliegue Típico",
+                subtitle: "El camino hacia la Producción",
+                content: [
+                    "1. **Diseñar en Sandbox:** Crear y refinar el prompt inicial.",
+                    "2. **Versionar en Git:** Tratar los prompts y código como infraestructura (PromptOps).",
+                    "3. **Ejecutar Tests:** Validar la calidad de la respuesta con tests de unidad y end-to-end.",
+                    "4. **Desplegar Contenedor:** Usar Docker/Kubernetes para la escalabilidad.",
+                    "5. **Monitorear:** Observar el rendimiento en tiempo real y la calidad de las respuestas (MLOps)."
+                ],
+                className: "bg-gray-900",
+                interactiveTitle: "Haz clic para recorrer el pipeline"
+            },
+             // SLIDE 8: Tendencia: APE (Index 7)
+            {
+                title: "Tendencia: Prompting Automático (APE)",
+                subtitle: "El futuro de la Ingeniería de Prompts",
+                content: [
+                    "La **Automatic Prompt Engineering (APE)** usa métodos de búsqueda y evaluación para que la **IA genere sus propios prompts óptimos**.",
+                    "**Ventajas:** Reduce la intervención manual y el ensayo y error.",
+                    "Se adapta dinámicamente a nuevos datos y tareas sin intervención humana.",
+                    "Ya existen frameworks open-source que implementan estas capacidades."
+                ],
+                className: "bg-gray-800",
+                interactiveTitle: "Haz clic para descubrir APE"
+            },
+            // SLIDE 9: Habilidades del Futuro (Index 8)
+            {
+                title: "Habilidades Clave del Futuro Ingeniero de IA",
+                subtitle: "Lo que viene después del Prompt",
+                content: [
+                    "**Dominio Cuantitativo:** Evaluar respuestas con métricas y benchmarks públicos.",
+                    "**Arquitectura y Datos:** Entender modelos 'Transformer' y manejar Bases de Datos Vectoriales para RAG.",
+                    "**Ética y Seguridad:** Diseñar 'guardrails' (barreras) y realizar 'red teaming' para crear sistemas robustos y seguros."
+                ],
+                className: "bg-gradient-to-tl from-gray-900 to-indigo-900",
+                interactiveTitle: "Haz clic para ver las habilidades"
+            },
+            // SLIDE 10: Herramientas Destacadas (Index 9)
+            {
+                title: "Herramientas Destacadas para IA Full-Stack",
+                subtitle: "Plataformas Esenciales para el Desarrollo",
+                content: [
+                    "**Gemini:** Familia de modelos de IA de Google, diseñada para razonamiento complejo y multimodalidad.",
+                    "**Google AI Studio:** Plataforma para prototipar y desarrollar con modelos de Gemini directamente en el navegador.",
+                    "**Firebase Studio:** Un entorno de desarrollo (backend-as-a-service) para construir aplicaciones web y móviles escalables, ideal para el backend de apps IA.",
+                    "**Cursor IA:** Editor de código potenciado por IA que ayuda a escribir, depurar y generar código."
+                ],
+                links: [
+                    { text: "Visitar Sitio", url: "https://ai.google/gemini/" },
+                    { text: "Explorar Studio", url: "https://ai.google.dev/gemini-api/docs/api-key" },
+                    { text: "Ir a Firebase", url: "https://firebase.google.com/" },
+                    { text: "Descargar Cursor", url: "https://www.cursor.so/" }
+                ],
+                className: "bg-gradient-to-br from-indigo-900 to-gray-800",
+                interactiveTitle: "Haz clic para ver la lista de herramientas con enlaces"
+            }
+        ];
+
+        let currentSlideIndex = 0;
+        let interactiveStep = 0; // Para controlar la revelación de puntos
+        const slideContainer = document.getElementById('slide-inner-content');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const slideCounter = document.getElementById('slide-counter');
+        const presentationContainer = document.getElementById('presentation-container');
+
+        // Función de utilidad para manejar la espera con reintentos (backoff)
+        async function fetchWithBackoff(url, options, maxRetries = 5, initialDelay = 1000) {
+            let delay = initialDelay;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) {
+                        console.error("Fetch failed after max retries:", error);
+                        throw error;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Duplicar el retraso (exponencial)
+                }
+            }
+        }
+        
+        /**
+         * Renderiza el contenido de la diapositiva actual.
+         */
+        function renderSlide() {
+            const slide = slides[currentSlideIndex];
+            interactiveStep = 0; // Reinicia el paso interactivo
+            
+            // 1. Actualizar el fondo y el contador
+            presentationContainer.className = `relative w-full max-w-7xl mx-auto shadow-2xl rounded-lg overflow-hidden mt-4 ${slide.className}`;
+            slideCounter.textContent = `${currentSlideIndex + 1} / ${slides.length}`;
+            
+            // 2. Actualizar la barra de progreso
+            const progress = (currentSlideIndex + 1) / slides.length * 100;
+            progressBar.style.width = `${progress}%`;
+            
+            // 3. Crear el HTML de la diapositiva
+            let html = `
+                <h1 class="text-6xl font-extrabold mb-4 text-teal-400">${slide.title}</h1>
+                <p class="text-3xl font-light text-gray-300 mb-10">${slide.subtitle}</p>
+            `;
+
+            if (slide.isTitle) {
+                // Diapositiva de título no tiene contenido de lista
+            } else if (slide.content.length > 0) {
+                // Agregar el título interactivo si existe
+                if (slide.interactiveTitle) {
+                     html += `<p id="interactive-prompt" class="text-xl font-medium text-indigo-400 mb-8 cursor-pointer hover:underline">${slide.interactiveTitle}</p>`;
+                }
+
+                // Agregar los puntos revelables. Se usa un formato especial si hay links
+                html += '<ul id="slide-points" class="text-left w-full max-w-4xl space-y-4">';
+                slide.content.forEach((point, index) => {
+                    const linkData = slide.links && slide.links[index] ? slide.links[index] : null;
+                    const linkHtml = linkData 
+                        ? `<a href="${linkData.url}" target="_blank" class="text-teal-400 hover:text-teal-300 underline font-semibold transition duration-200 ml-4">${linkData.text} →</a>`
+                        : '';
+                    
+                    // Usamos flex para alinear descripción y enlace si hay un link
+                    const flexClass = linkData ? 'flex justify-between items-center' : '';
+
+                    html += `<li class="reveal-point text-2xl ${flexClass}" data-index="${index}">
+                                <span class="${linkData ? 'flex-1 text-left' : ''}"> • ${point}</span>
+                                ${linkHtml}
+                             </li>`;
+                });
+                html += '</ul>';
+            }
+
+            slideContainer.innerHTML = html;
+            
+            // 4. Configurar botones
+            prevBtn.disabled = currentSlideIndex === 0;
+            nextBtn.disabled = currentSlideIndex === slides.length - 1;
+
+            // 5. Configurar la interactividad si no es la diapositiva de título
+            if (!slide.isTitle && slide.content.length > 0) {
+                // Agregar listeners para la revelación
+                document.getElementById('slide-content').onclick = handleInteraction;
+                document.getElementById('slide-points').style.display = 'none'; // Ocultar inicialmente
+                
+                // Mostrar el prompt interactivo
+                const interactivePrompt = document.getElementById('interactive-prompt');
+                if (interactivePrompt) {
+                     interactivePrompt.style.display = 'block';
+                }
+                
+                // Si la diapositiva ya se visitó, mostrar todo el contenido inmediatamente
+                if (slide.visited) {
+                    interactiveStep = slide.content.length;
+                    document.getElementById('slide-points').style.display = 'block';
+                    for (let i = 0; i < slide.content.length; i++) {
+                        document.querySelector(`[data-index="${i}"]`).classList.add('active');
+                    }
+                    if (interactivePrompt) {
+                       interactivePrompt.style.display = 'none'; // Ocultar el prompt
+                    }
+                }
+            } else {
+                 document.getElementById('slide-content').onclick = null; // Desactivar interacción en diapositivas estáticas
+            }
+            
+            // Marcar la diapositiva como visitada
+            slides[currentSlideIndex].visited = true;
+        }
+
+        /**
+         * Maneja la lógica de la interacción dentro de la diapositiva (revelar puntos).
+         */
+        function handleInteraction() {
+            const slide = slides[currentSlideIndex];
+            const pointsList = document.getElementById('slide-points');
+            const interactivePrompt = document.getElementById('interactive-prompt');
+
+            if (interactiveStep < slide.content.length) {
+                if (interactivePrompt) {
+                   interactivePrompt.style.display = 'none';
+                }
+                pointsList.style.display = 'block';
+                
+                const point = document.querySelector(`[data-index="${interactiveStep}"]`);
+                if (point) {
+                    point.classList.add('active');
+                    interactiveStep++;
+                }
+            } else {
+                // Si ya se revelaron todos los puntos, avanzar a la siguiente diapositiva automáticamente
+                nextSlide();
+            }
+        }
+        
+        /**
+         * Avanza a la siguiente diapositiva.
+         */
+        function nextSlide() {
+            if (currentSlideIndex < slides.length - 1) {
+                currentSlideIndex++;
+                renderSlide();
+            }
+        }
+
+        /**
+         * Retrocede a la diapositiva anterior.
+         */
+        function prevSlide() {
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                renderSlide();
+            }
+        }
+
+        // --- Inicialización y Event Listeners ---
+        
+        prevBtn.addEventListener('click', prevSlide);
+        nextBtn.addEventListener('click', nextSlide);
+
+        // Inicializar la primera diapositiva al cargar
+        document.addEventListener('DOMContentLoaded', renderSlide);
+
+    </script>
+</body>
+</html>
