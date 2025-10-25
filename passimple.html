@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Simple Adventure - English A2</title>
+    <!-- Carga de Tailwind CSS CDN para un diseño responsivo y moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de Lucide Icons para iconos limpios -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Configuración de fuente y colores base */
+        :root {
+            --primary-color: #6366f1; /* Indigo 500 */
+            --secondary-color: #f59e0b; /* Amber 500 */
+            --bg-color: #f9fafb; /* Gray 50 */
+            --text-color: #1f2937; /* Gray 800 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        /* Estilos para el efecto de sombra y esquinas redondeadas */
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .lesson-link.active {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 700;
+        }
+        .game-button {
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 0 0 var(--primary-color);
+        }
+        .game-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 0 0 var(--primary-color);
+        }
+        .game-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 0 0 var(--primary-color);
+        }
+        .modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            500: 'var(--primary-color)',
+                            600: '#4f46e5',
+                        },
+                        secondary: {
+                            500: 'var(--secondary-color)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen">
+
+    <!-- Header / Barra de Navegación Fija -->
+    <header class="bg-primary-500 text-white shadow-lg sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto p-4 flex justify-between items-center">
+            <h1 class="text-2xl font-extrabold tracking-tight">Past Simple Adventure 🚀</h1>
+            <div id="progress-display" class="text-sm font-semibold p-1 px-3 bg-white/20 rounded-full">
+                Progress: 0%
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        <!-- Menú Lateral (Columna 1) -->
+        <aside class="lg:col-span-1">
+            <div class="bg-white card p-4 sticky top-20">
+                <h2 class="text-lg font-bold mb-4 text-primary-500 border-b pb-2">Course Menu</h2>
+                <nav>
+                    <button class="lesson-link w-full text-left p-3 my-1 rounded-lg text-gray-700 hover:bg-indigo-50 transition-colors" data-lesson="1">
+                        <i data-lucide="book-open" class="inline w-5 h-5 mr-2"></i> Session 1: Regular Verbs
+                    </button>
+                    <button class="lesson-link w-full text-left p-3 my-1 rounded-lg text-gray-700 hover:bg-indigo-50 transition-colors" data-lesson="2">
+                        <i data-lucide="book" class="inline w-5 h-5 mr-2"></i> Session 2: Irregular Journey
+                    </button>
+                    <button class="lesson-link w-full text-left p-3 my-1 rounded-lg text-gray-700 hover:bg-indigo-50 transition-colors" data-lesson="3">
+                        <i data-lucide="pen-tool" class="inline w-5 h-5 mr-2"></i> Session 3: Integrated Practice
+                    </button>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Contenido Principal (Columnas 2, 3, 4) -->
+        <section id="content-area" class="lg:col-span-3">
+            <!-- Contenido de Bienvenida -->
+            <div id="lesson-welcome" class="lesson-content">
+                <div class="bg-white card p-6 md:p-10 mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Welcome to the Past Simple Adventure!</h2>
+                    <p class="text-lg text-gray-600 mb-6">This course is designed for A2/B1 students to master the Simple Past Tense using interactive lessons and fun games. Are you ready to travel back in time?</p>
+                    <p class="text-sm italic text-primary-500">Based on your academic document, we will focus on the structure, regular verbs, irregular verbs, and pronunciation.</p>
+                    <button onclick="changeLesson(1)" class="mt-4 px-6 py-3 bg-secondary-500 text-white font-bold rounded-full hover:bg-amber-600 transition-colors">Start Session 1</button>
+                </div>
+            </div>
+
+            <!-- LECCIÓN 1: Regular Verbs & Structure -->
+            <div id="lesson-1" class="lesson-content hidden">
+                <h2 class="text-3xl font-extrabold text-primary-500 mb-6">Session 1: Regular Verbs & Structure</h2>
+
+                <!-- Contenido -->
+                <div class="bg-white card p-6 mb-8">
+                    <h3 class="text-2xl font-semibold mb-3">Grammar Focus: Regular Verbs</h3>
+                    <p class="mb-4">The Simple Past describes actions finished in a defined time in the past (yesterday, last week).</p>
+
+                    <div class="grid md:grid-cols-3 gap-4 mb-6 text-center">
+                        <div class="p-4 bg-green-100 rounded-lg">
+                            <h4 class="font-bold">Affirmative (+)</h4>
+                            <p>Subject + Verb<span class="font-mono text-red-600">+ed</span></p>
+                            <p class="text-sm italic mt-1">Example: <span class="font-bold">She played</span> soccer.</p>
+                        </div>
+                        <div class="p-4 bg-red-100 rounded-lg">
+                            <h4 class="font-bold">Negative (-)</h4>
+                            <p>Subject + <span class="font-mono text-red-600">did not (didn't)</span> + Verb<span class="font-mono text-red-600">(base)</span></p>
+                            <p class="text-sm italic mt-1">Example: <span class="font-bold">She didn't play</span> soccer.</p>
+                        </div>
+                        <div class="p-4 bg-blue-100 rounded-lg">
+                            <h4 class="font-bold">Interrogative (?)</h4>
+                            <p><span class="font-mono text-red-600">Did</span> + Subject + Verb<span class="font-mono text-red-600">(base)</span>?</p>
+                            <p class="text-sm italic mt-1">Example: <span class="font-bold">Did she play</span> soccer?</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mt-6 mb-3">Pronunciation of -ed: The Secret Key!</h3>
+                    <p class="mb-4">The pronunciation of the <span class="font-bold">-ed</span> ending is crucial for fluency. There are three sounds:</p>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li><span class="font-bold text-red-600">/ɪd/</span>: After verbs ending in /t/ or /d/ sounds (e.g., <span class="font-mono">start<span class="font-bold">ed</span>, need<span class="font-bold">ed</span></span>)</li>
+                        <li><span class="font-bold text-green-600">/t/</span>: After verbs ending in voiceless sounds (e.g., <span class="font-mono">work<span class="font-bold">ed</span>, watch<span class="font-bold">ed</span></span>)</li>
+                        <li><span class="font-bold text-blue-600">/d/</span>: After verbs ending in voiced sounds (e.g., <span class="font-mono">play<span class="font-bold">ed</span>, call<span class="font-bold">ed</span></span>)</li>
+                    </ul>
+                </div>
+
+                <!-- Juegos de la Sesión 1 -->
+                <h3 class="text-2xl font-extrabold text-gray-800 mb-4">Practice Games (Session 1)</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-1">
+                        <h4 class="font-bold text-lg mb-2">1. Regular Verb Match (Memorama)</h4>
+                        <p class="text-sm text-gray-500">Match the Present Simple form with the Past Simple form. Find all the pairs!</p>
+                        <button onclick="startGame(1)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-2">
+                        <h4 class="font-bold text-lg mb-2">2. Pronunciation Sort</h4>
+                        <p class="text-sm text-gray-500">Sort the verbs into the correct pronunciation category: /t/, /d/, or /ɪd/.</p>
+                        <button onclick="startGame(2)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-3">
+                        <h4 class="font-bold text-lg mb-2">3. True/False Structure</h4>
+                        <p class="text-sm text-gray-500">Decide if the statements about the Past Simple structure are true or false.</p>
+                        <button onclick="startGame(3)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LECCIÓN 2: Irregular Verbs -->
+            <div id="lesson-2" class="lesson-content hidden">
+                <h2 class="text-3xl font-extrabold text-primary-500 mb-6">Session 2: The Irregular Journey</h2>
+
+                <!-- Contenido -->
+                <div class="bg-white card p-6 mb-8">
+                    <h3 class="text-2xl font-semibold mb-3">Grammar Focus: Irregular Verbs</h3>
+                    <p class="mb-4">Irregular verbs do not follow the <span class="font-bold">-ed</span> rule. You must learn their Past Simple form by heart! The good news: they only change in the <span class="font-bold">affirmative form</span>.</p>
+
+                    <h4 class="text-xl font-semibold mt-4 mb-3">The Top 10 Irregular Verbs:</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center font-mono text-sm">
+                        <div class="p-2 bg-yellow-100 rounded-lg">go <i data-lucide="arrow-right" class="inline w-3 h-3"></i> went</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">have <i data-lucide="arrow-right" class="inline w-3 h-3"></i> had</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">see <i data-lucide="arrow-right" class="inline w-3 h-3"></i> saw</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">make <i data-lucide="arrow-right" class="inline w-3 h-3"></i> made</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">take <i data-lucide="arrow-right" class="inline w-3 h-3"></i> took</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">come <i data-lucide="arrow-right" class="inline w-3 h-3"></i> came</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">get <i data-lucide="arrow-right" class="inline w-3 h-3"></i> got</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">know <i data-lucide="arrow-right" class="inline w-3 h-3"></i> knew</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">think <i data-lucide="arrow-right" class="inline w-3 h-3"></i> thought</div>
+                        <div class="p-2 bg-yellow-100 rounded-lg">say <i data-lucide="arrow-right" class="inline w-3 h-3"></i> said</div>
+                    </div>
+                    <p class="mt-4 text-sm italic">Focus on these 20-30 common verbs for your A2 level!</p>
+                </div>
+
+                <!-- Juegos de la Sesión 2 -->
+                <h3 class="text-2xl font-extrabold text-gray-800 mb-4">Practice Games (Session 2)</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-4">
+                        <h4 class="font-bold text-lg mb-2">4. Irregular Trivia</h4>
+                        <p class="text-sm text-gray-500">Choose the correct past form for the given base verb. Test your memory!</p>
+                        <button onclick="startGame(4)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-5">
+                        <h4 class="font-bold text-lg mb-2">5. Verbs Challenge (Fill-in-the-blank)</h4>
+                        <p class="text-sm text-gray-500">Read the sentence and fill the blank with the correct Irregular Past Simple form.</p>
+                        <button onclick="startGame(5)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-6">
+                        <h4 class="font-bold text-lg mb-2">6. ¡Extinción! (Quick Verb Check)</h4>
+                        <p class="text-sm text-gray-500">Quickly find the INCORRECT Past Simple verb in the list before time runs out!</p>
+                        <button onclick="startGame(6)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LECCIÓN 3: Integrated Practice -->
+            <div id="lesson-3" class="lesson-content hidden">
+                <h2 class="text-3xl font-extrabold text-primary-500 mb-6">Session 3: Integrated Practice</h2>
+
+                <!-- Contenido -->
+                <div class="bg-white card p-6 mb-8">
+                    <h3 class="text-2xl font-semibold mb-3">Focus on Fluency: My Story</h3>
+                    <p class="mb-4">Now it's time to connect the dots and tell a story about your past! Use regular and irregular verbs naturally.</p>
+
+                    <h4 class="text-xl font-semibold mt-4 mb-3">Connecting Vocabulary:</h4>
+                    <p class="italic mb-2">Use these words to link your ideas and make your narration smooth:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">First, ...</span>
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">Then, ...</span>
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">After that, ...</span>
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">Suddenly, ...</span>
+                        <span class="bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">Finally, ...</span>
+                    </div>
+
+                    <p class="mt-4">Remember the goal: <span class="font-bold">to narrate and describe an experience</span> (a trip, an event, a past achievement) using the Simple Past Tense correctly!</p>
+                </div>
+
+                <!-- Juegos de la Sesión 3 -->
+                <h3 class="text-2xl font-extrabold text-gray-800 mb-4">Practice Games (Session 3)</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-7">
+                        <h4 class="font-bold text-lg mb-2">7. Story Chain Starter</h4>
+                        <p class="text-sm text-gray-500">Continue a past story by selecting the correct, logical sequence sentence.</p>
+                        <button onclick="startGame(7)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-8">
+                        <h4 class="font-bold text-lg mb-2">8. Sentence Builder (Strategy Game)</h4>
+                        <p class="text-sm text-gray-500">Arrange the words to form a grammatically correct Past Simple sentence.</p>
+                        <button onclick="startGame(8)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-9">
+                        <h4 class="font-bold text-lg mb-2">9. The Simple Past Trivia</h4>
+                        <p class="text-sm text-gray-500">Final mixed-tense trivia to test your overall knowledge (Challenge).</p>
+                        <button onclick="startGame(9)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                    <div class="bg-white card p-5 flex flex-col justify-between" id="game-card-10">
+                        <h4 class="font-bold text-lg mb-2">10. La Oca of the Simple Past (The Goose Game)</h4>
+                        <p class="text-sm text-gray-500">Roll the dice, answer a question, and advance on the board!</p>
+                        <button onclick="startGame(10)" class="mt-3 game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600">Play</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor Genérico para Juegos -->
+            <div id="game-container" class="bg-white card p-6 md:p-8 mt-8 hidden">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h3 id="game-title" class="text-2xl font-bold text-secondary-500"></h3>
+                    <button onclick="exitGame()" class="text-red-500 hover:text-red-700 font-semibold flex items-center">
+                        <i data-lucide="x-circle" class="inline w-5 h-5 mr-1"></i> Exit
+                    </button>
+                </div>
+                <div id="game-content">
+                    <!-- Contenido del juego cargado por JS -->
+                </div>
+                <div id="game-result" class="mt-4 p-4 rounded-lg text-center font-bold hidden"></div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal de Retroalimentación/Mensaje (sustituye a alert/confirm) -->
+    <div id="feedback-modal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center opacity-0 invisible z-50">
+        <div class="bg-white card p-6 w-11/12 max-w-sm transform scale-95 transition-transform duration-300">
+            <div class="flex items-center mb-4">
+                <i id="modal-icon" data-lucide="check-circle" class="w-8 h-8 text-green-500 mr-3"></i>
+                <h4 id="modal-title" class="text-xl font-bold">Great Job!</h4>
+            </div>
+            <p id="modal-message" class="text-gray-600 mb-6">You completed the game!</p>
+            <button onclick="closeModal()" class="w-full py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600">Continue</button>
+        </div>
+    </div>
+
+    <!-- Script principal de la aplicación -->
+    <script>
+        // Inicialización de iconos de Lucide
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initApp();
+        });
+
+        const LESSON_COUNT = 3;
+        const GAME_COUNT = 10;
+        let currentGameId = null;
+
+        const VERBS = {
+            regular: [
+                { base: "work", past: "worked", pron: "/t/" },
+                { base: "play", past: "played", pron: "/d/" },
+                { base: "start", past: "started", pron: "/ɪd/" },
+                { base: "need", past: "needed", pron: "/ɪd/" },
+                { base: "watch", past: "watched", pron: "/t/" },
+                { base: "call", past: "called", pron: "/d/" },
+                { base: "live", past: "lived", pron: "/d/" },
+                { base: "want", past: "wanted", pron: "/ɪd/" },
+            ],
+            irregular: [
+                { base: "go", past: "went" },
+                { base: "see", past: "saw" },
+                { base: "make", past: "made" },
+                { base: "take", past: "took" },
+                { base: "come", past: "came" },
+                { base: "get", past: "got" },
+                { base: "know", past: "knew" },
+                { base: "think", past: "thought" },
+                { base: "say", past: "said" },
+                { base: "eat", past: "ate" },
+                { base: "run", past: "ran" },
+                { base: "do", past: "did" },
+            ]
+        };
+
+        const GAMES = [
+            // Session 1 Games
+            { id: 1, title: "1. Regular Verb Match (Memorama)", lesson: 1, init: initGame1 },
+            { id: 2, title: "2. Pronunciation Sort", lesson: 1, init: initGame2 },
+            { id: 3, title: "3. True/False Structure", lesson: 1, init: initGame3 },
+            // Session 2 Games
+            { id: 4, title: "4. Irregular Trivia", lesson: 2, init: initGame4 },
+            { id: 5, title: "5. Verbs Challenge (Fill-in-the-blank)", lesson: 2, init: initGame5 },
+            { id: 6, title: "6. ¡Extinción! (Quick Verb Check)", lesson: 2, init: initGame6 },
+            // Session 3 Games
+            { id: 7, title: "7. Story Chain Starter", lesson: 3, init: initGame7 },
+            { id: 8, title: "8. Sentence Builder (Strategy Game)", lesson: 3, init: initGame8 },
+            { id: 9, title: "9. The Simple Past Trivia", lesson: 3, init: initGame9 },
+            { id: 10, title: "10. La Oca of the Simple Past (The Goose Game)", lesson: 3, init: initGame10 },
+        ];
+
+        let studentProgress = {};
+
+        // --- Core Utility Functions ---
+
+        /** Carga el progreso desde localStorage e inicializa la UI. */
+        function initApp() {
+            try {
+                const progress = localStorage.getItem('pastSimpleProgress');
+                if (progress) {
+                    studentProgress = JSON.parse(progress);
+                }
+            } catch (e) {
+                console.error("Error loading progress from localStorage:", e);
+                // Si falla la carga, usa el objeto vacío
+                studentProgress = {};
+            }
+
+            // Muestra la lección de bienvenida por defecto
+            changeLesson(0);
+            updateProgressUI();
+        }
+
+        /** Guarda el progreso en localStorage. */
+        function saveProgress() {
+            try {
+                localStorage.setItem('pastSimpleProgress', JSON.stringify(studentProgress));
+                updateProgressUI();
+            } catch (e) {
+                console.error("Error saving progress to localStorage:", e);
+            }
+        }
+
+        /** Marca un juego como completado y actualiza el progreso. */
+        function markGameCompleted(gameId) {
+            if (!studentProgress[gameId]) {
+                studentProgress[gameId] = true;
+                saveProgress();
+                showModal('Success!', '¡Felicidades! Has completado el juego. Tu progreso ha sido guardado.', 'check-circle', 'bg-green-500');
+            } else {
+                showModal('Completed!', 'Ya habías completado este desafío. ¡Intenta con otro!', 'info', 'bg-yellow-500');
+            }
+        }
+
+        /** Actualiza el indicador visual de progreso. */
+        function updateProgressUI() {
+            const completedGames = Object.keys(studentProgress).length;
+            const percentage = Math.round((completedGames / GAME_COUNT) * 100);
+            
+            document.getElementById('progress-display').textContent = `Progress: ${percentage}% (${completedGames}/${GAME_COUNT})`;
+
+            // Marca los botones de juego como completados
+            GAMES.forEach(game => {
+                const card = document.getElementById(`game-card-${game.id}`);
+                if (card) {
+                    if (studentProgress[game.id]) {
+                        card.classList.add('border-4', 'border-green-500', 'bg-green-50');
+                        card.querySelector('button').textContent = 'Completed (Play Again)';
+                        card.querySelector('button').classList.add('bg-green-600', 'hover:bg-green-700', 'shadow-green-600');
+                        card.querySelector('button').classList.remove('bg-primary-500', 'hover:bg-primary-600', 'shadow-primary-500');
+                    } else {
+                        card.classList.remove('border-4', 'border-green-500', 'bg-green-50');
+                        card.querySelector('button').textContent = 'Play';
+                        card.querySelector('button').classList.remove('bg-green-600', 'hover:bg-green-700', 'shadow-green-600');
+                        card.querySelector('button').classList.add('bg-primary-500', 'hover:bg-primary-600', 'shadow-primary-500');
+                    }
+                }
+            });
+
+            // Actualiza los iconos del menú
+            document.querySelectorAll('.lesson-link').forEach(button => {
+                const lessonId = parseInt(button.dataset.lesson);
+                const lessonGames = GAMES.filter(g => g.lesson === lessonId);
+                const completedLessonGames = lessonGames.filter(g => studentProgress[g.id]).length;
+                
+                let iconName = 'book';
+                if (completedLessonGames === lessonGames.length) {
+                    iconName = 'check-circle'; // Completado
+                } else if (completedLessonGames > 0) {
+                    iconName = 'loader-2'; // En progreso
+                } else if (lessonId === 1) {
+                    iconName = 'book-open';
+                } else if (lessonId === 3) {
+                    iconName = 'pen-tool';
+                }
+
+                button.querySelector('i').dataset.lucide = iconName;
+                lucide.createIcons();
+            });
+        }
+
+        /** Cambia el contenido visible (Lecciones o Bienvenida). */
+        function changeLesson(lessonId) {
+            document.querySelectorAll('.lesson-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('game-container').classList.add('hidden');
+            document.querySelectorAll('.lesson-link').forEach(el => el.classList.remove('active'));
+
+            if (lessonId === 0) {
+                document.getElementById('lesson-welcome').classList.remove('hidden');
+            } else {
+                document.getElementById(`lesson-${lessonId}`).classList.remove('hidden');
+                document.querySelector(`.lesson-link[data-lesson="${lessonId}"]`).classList.add('active');
+            }
+        }
+
+        /** Inicializa y muestra el contenedor de juego. */
+        function startGame(gameId) {
+            const game = GAMES.find(g => g.id === gameId);
+            if (!game) return;
+
+            // Ocultar lecciones, mostrar contenedor de juego
+            document.querySelectorAll('.lesson-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('game-container').classList.remove('hidden');
+
+            document.getElementById('game-title').textContent = game.title;
+            document.getElementById('game-content').innerHTML = ''; // Limpiar contenido anterior
+            document.getElementById('game-result').classList.add('hidden');
+
+            currentGameId = gameId;
+            game.init(); // Llamar a la función de inicialización del juego específico
+        }
+
+        /** Oculta el juego y vuelve a la lección. */
+        function exitGame() {
+            const lessonId = GAMES.find(g => g.id === currentGameId).lesson;
+            changeLesson(lessonId);
+            currentGameId = null;
+        }
+
+        /** Muestra el modal de mensaje (Sustituto de alert()). */
+        function showModal(title, message, iconName = 'info', iconColorClass = 'bg-primary-500') {
+            const modal = document.getElementById('feedback-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            
+            const icon = document.getElementById('modal-icon');
+            icon.dataset.lucide = iconName;
+            icon.className = icon.className.split(' ').filter(c => !c.startsWith('text-')).join(' '); // Limpiar color
+            icon.classList.add(`text-${iconName.includes('check') ? 'green' : iconName.includes('alert') ? 'red' : 'primary'}-500`);
+            lucide.createIcons();
+
+            modal.classList.remove('opacity-0', 'invisible');
+            modal.querySelector('.card').classList.remove('scale-95');
+        }
+
+        /** Oculta el modal. */
+        function closeModal() {
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.add('opacity-0', 'invisible');
+            modal.querySelector('.card').classList.add('scale-95');
+        }
+
+
+        // --- GAME LOGIC FUNCTIONS ---
+
+        // Helper para mezclar arrays
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 1. Memorama de Verbos Regulares
+        function initGame1() {
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4">Find the pairs: Base Form and Past Simple Form (Regular Verbs).</p>
+                <div id="memory-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-3"></div>
+            `;
+            let cards = [];
+            VERBS.regular.slice(0, 6).forEach(v => { // Usa 6 verbos (12 cartas)
+                cards.push({ id: v.base, text: v.base, type: 'base' });
+                cards.push({ id: v.base, text: v.past, type: 'past' });
+            });
+
+            shuffle(cards);
+
+            const grid = document.getElementById('memory-grid');
+            cards.forEach((card, index) => {
+                grid.innerHTML += `
+                    <div data-id="${card.id}" data-index="${index}" class="memory-card bg-primary-500 text-white font-bold h-24 flex items-center justify-center rounded-lg cursor-pointer transform transition-transform duration-300 hover:scale-[1.05] shadow-lg">
+                        <span class="card-back text-2xl" style="opacity:1;">?</span>
+                        <span class="card-front text-xl hidden">${card.text}</span>
+                    </div>
+                `;
+            });
+
+            let flippedCards = [];
+            let matchesFound = 0;
+
+            grid.querySelectorAll('.memory-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    if (this.classList.contains('flipped') || this.classList.contains('matched') || flippedCards.length === 2) return;
+
+                    flipCard(this);
+                    flippedCards.push(this);
+
+                    if (flippedCards.length === 2) {
+                        setTimeout(checkMatch, 800);
+                    }
+                });
+            });
+
+            function flipCard(card) {
+                card.classList.add('flipped');
+                card.querySelector('.card-back').style.opacity = 0;
+                card.querySelector('.card-front').classList.remove('hidden');
+            }
+
+            function unflipCards() {
+                flippedCards.forEach(card => {
+                    card.classList.remove('flipped');
+                    card.querySelector('.card-back').style.opacity = 1;
+                    card.querySelector('.card-front').classList.add('hidden');
+                });
+                flippedCards = [];
+            }
+
+            function checkMatch() {
+                const [card1, card2] = flippedCards;
+                if (card1.dataset.id === card2.dataset.id) {
+                    card1.classList.add('matched', 'bg-green-500', 'hover:scale-100');
+                    card2.classList.add('matched', 'bg-green-500', 'hover:scale-100');
+                    matchesFound++;
+                    if (matchesFound === 6) {
+                        document.getElementById('game-result').textContent = '¡Felicidades! ¡Has encontrado todos los pares!';
+                        document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                        document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                        markGameCompleted(currentGameId);
+                    }
+                    flippedCards = [];
+                } else {
+                    card1.classList.add('bg-red-500');
+                    card2.classList.add('bg-red-500');
+                    setTimeout(() => {
+                        unflipCards();
+                        card1.classList.remove('bg-red-500');
+                        card2.classList.remove('bg-red-500');
+                    }, 500);
+                }
+            }
+        }
+
+        // 2. Pronunciation Sort
+        function initGame2() {
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4">Drag and drop each verb into the correct pronunciation category: <span class="text-red-600 font-bold">/ɪd/</span>, <span class="text-green-600 font-bold">/t/</span>, or <span class="text-blue-600 font-bold">/d/</span>.</p>
+                <div id="word-list" class="flex flex-wrap gap-3 p-4 bg-gray-100 rounded-lg mb-6 min-h-[100px]"></div>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div id="box-id" data-pron="/ɪd/" class="sort-box p-4 bg-red-100 border-2 border-red-400 rounded-lg min-h-[150px]">
+                        <h4 class="font-bold text-red-600 mb-2">/ɪd/ (t, d)</h4>
+                    </div>
+                    <div id="box-t" data-pron="/t/" class="sort-box p-4 bg-green-100 border-2 border-green-400 rounded-lg min-h-[150px]">
+                        <h4 class="font-bold text-green-600 mb-2">/t/ (voiceless)</h4>
+                    </div>
+                    <div id="box-d" data-pron="/d/" class="sort-box p-4 bg-blue-100 border-2 border-blue-400 rounded-lg min-h-[150px]">
+                        <h4 class="font-bold text-blue-600 mb-2">/d/ (voiced)</h4>
+                    </div>
+                </div>
+                <button onclick="checkGame2()" class="mt-6 game-button bg-secondary-500 text-white p-3 rounded-xl hover:bg-amber-600">Check Results</button>
+            `;
+
+            const words = shuffle([...VERBS.regular]);
+            const wordList = document.getElementById('word-list');
+            words.forEach(v => {
+                wordList.innerHTML += `
+                    <div draggable="true" data-pron="${v.pron}" class="draggable-word p-2 bg-white rounded-md shadow-md cursor-move font-mono">${v.past}</div>
+                `;
+            });
+
+            // Implementación Drag and Drop
+            let dragged;
+            document.querySelectorAll('.draggable-word').forEach(word => {
+                word.addEventListener('dragstart', (e) => { dragged = e.target; });
+            });
+
+            document.querySelectorAll('.sort-box, #word-list').forEach(box => {
+                box.addEventListener('dragover', (e) => { e.preventDefault(); });
+                box.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (e.target.classList.contains('sort-box')) {
+                        e.target.appendChild(dragged);
+                    } else if (e.target.id === 'word-list') {
+                        e.target.appendChild(dragged);
+                    }
+                });
+            });
+
+            window.checkGame2 = function() {
+                let correct = 0;
+                let total = words.length;
+                let incorrectWords = [];
+
+                document.querySelectorAll('.draggable-word').forEach(word => {
+                    const parentBox = word.closest('.sort-box');
+                    if (parentBox && parentBox.dataset.pron === word.dataset.pron) {
+                        correct++;
+                        word.classList.remove('bg-red-300');
+                        word.classList.add('bg-green-300');
+                    } else if (parentBox) {
+                        word.classList.remove('bg-green-300');
+                        word.classList.add('bg-red-300');
+                        incorrectWords.push(word.textContent);
+                    }
+                });
+
+                const resultDiv = document.getElementById('game-result');
+                if (correct === total) {
+                    resultDiv.textContent = '¡Perfecto! Todas las pronunciaciones son correctas.';
+                    resultDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    resultDiv.classList.add('bg-green-100', 'text-green-700');
+                    markGameCompleted(currentGameId);
+                } else {
+                    resultDiv.textContent = `Keep trying! ${correct}/${total} correct. Check the red words.`;
+                    resultDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    resultDiv.classList.add('bg-red-100', 'text-red-700');
+                }
+            }
+        }
+
+        // 3. True/False Structure
+        function initGame3() {
+            const questions = shuffle([
+                { q: "In affirmative sentences, we use the base form of the verb.", a: false },
+                { q: "The auxiliary verb for the Simple Past Negative is 'do not'.", a: false },
+                { q: "We use 'did' for questions and the base form of the main verb.", a: true },
+                { q: "Regular verbs always end in '-ed' in the past form.", a: true },
+                { q: "The verb 'play' becomes 'plaid' in the past simple.", a: false },
+                { q: "The auxiliary 'did not' is used for all subjects (I, you, he, she, it, we, they).", a: true }
+            ]).slice(0, 5); // 5 preguntas
+
+            let currentQ = 0;
+            let score = 0;
+
+            document.getElementById('game-content').innerHTML = `
+                <div class="text-xl font-semibold mb-4">Question <span id="q-number">1</span> of 5</div>
+                <div id="q-text" class="text-2xl font-bold p-6 bg-blue-50 rounded-lg mb-6"></div>
+                <div class="flex space-x-4">
+                    <button onclick="answerGame3(true)" class="flex-1 p-4 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-colors">TRUE</button>
+                    <button onclick="answerGame3(false)" class="flex-1 p-4 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors">FALSE</button>
+                </div>
+            `;
+
+            window.answerGame3 = function(answer) {
+                const question = questions[currentQ];
+                if (answer === question.a) {
+                    score++;
+                    document.getElementById('game-result').textContent = 'Correct!';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    document.getElementById('game-result').textContent = 'Incorrect. The correct answer is ' + (question.a ? 'TRUE' : 'FALSE') + '.';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                }
+
+                currentQ++;
+                if (currentQ < questions.length) {
+                    setTimeout(loadNextQuestion, 1500);
+                } else {
+                    setTimeout(() => {
+                        showModal('Quiz Finished!', `Your final score is ${score} out of 5!`, score >= 4 ? 'award' : 'alert-triangle', score >= 4 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 4) markGameCompleted(currentGameId);
+                    }, 2000);
+                }
+            }
+
+            function loadNextQuestion() {
+                document.getElementById('q-number').textContent = currentQ + 1;
+                document.getElementById('q-text').textContent = questions[currentQ].q;
+                document.getElementById('game-result').classList.add('hidden');
+            }
+
+            loadNextQuestion();
+        }
+
+        // 4. Irregular Trivia
+        function initGame4() {
+            const irregularVerbs = shuffle([...VERBS.irregular]);
+            let currentQ = 0;
+            let score = 0;
+            const TOTAL_QUESTIONS = 5;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg">Select the correct Simple Past form for the verb in parentheses.</p>
+                <div class="text-xl font-semibold mb-4">Question <span id="q4-number">1</span> of ${TOTAL_QUESTIONS}</div>
+                <div id="q4-verb" class="text-3xl font-bold p-6 bg-yellow-50 text-yellow-800 rounded-lg mb-6 text-center"></div>
+                <div id="q4-options" class="grid grid-cols-2 gap-4"></div>
+            `;
+
+            function loadQuestion() {
+                const verb = irregularVerbs[currentQ];
+                const correct = verb.past;
+
+                // Generar 3 opciones incorrectas (base + 2 aleatorias)
+                let options = [correct, verb.base];
+                while (options.length < 4) {
+                    const randomVerb = irregularVerbs[Math.floor(Math.random() * irregularVerbs.length)];
+                    if (!options.includes(randomVerb.past) && randomVerb.past !== verb.past) {
+                        options.push(randomVerb.past);
+                    }
+                }
+                options = shuffle(options);
+
+                document.getElementById('q4-number').textContent = currentQ + 1;
+                document.getElementById('q4-verb').textContent = `[ ${verb.base} ]`;
+                const optionsDiv = document.getElementById('q4-options');
+                optionsDiv.innerHTML = '';
+                options.forEach(opt => {
+                    optionsDiv.innerHTML += `
+                        <button onclick="answerGame4('${opt}', '${correct}')" class="p-4 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-colors">${opt}</button>
+                    `;
+                });
+                document.getElementById('game-result').classList.add('hidden');
+            }
+
+            window.answerGame4 = function(selected, correct) {
+                if (selected === correct) {
+                    score++;
+                    document.getElementById('game-result').textContent = 'Correct!';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    document.getElementById('game-result').textContent = `Incorrect. The past form of ${irregularVerbs[currentQ].base} is ${correct}.`;
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                }
+
+                currentQ++;
+                if (currentQ < TOTAL_QUESTIONS) {
+                    setTimeout(loadQuestion, 1500);
+                } else {
+                    setTimeout(() => {
+                        showModal('Trivia Finished!', `Your score is ${score} out of ${TOTAL_QUESTIONS}!`, score >= 4 ? 'award' : 'alert-triangle', score >= 4 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 4) markGameCompleted(currentGameId);
+                    }, 2000);
+                }
+            }
+
+            loadQuestion();
+        }
+
+        // 5. Verbs Challenge (Fill-in-the-blank)
+        function initGame5() {
+            const sentences = shuffle([
+                { base: "go", past: "went", text: "Last summer, I (go) ___ to the beach with my family." },
+                { base: "eat", past: "ate", text: "Yesterday, we (eat) ___ pizza for dinner." },
+                { base: "see", past: "saw", text: "She (see) ___ a shooting star last night." },
+                { base: "make", past: "made", text: "For my birthday, my mom (make) ___ a huge cake." },
+                { base: "do", past: "did", text: "He (do) ___ his homework before playing games." }
+            ]).slice(0, 4); // 4 preguntas
+
+            let currentQ = 0;
+            let score = 0;
+            const TOTAL_QUESTIONS = sentences.length;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg">Type the Simple Past form of the verb in parentheses to complete the sentence.</p>
+                <div class="text-xl font-semibold mb-4">Question <span id="q5-number">1</span> of ${TOTAL_QUESTIONS}</div>
+                <div id="q5-sentence" class="text-2xl font-bold p-6 bg-yellow-50 text-gray-800 rounded-lg mb-6"></div>
+                <input type="text" id="q5-input" class="w-full p-3 border-2 border-gray-300 rounded-lg mb-4 text-xl" placeholder="Write the verb here...">
+                <button onclick="checkGame5()" class="game-button bg-primary-500 text-white p-3 rounded-xl hover:bg-primary-600 w-full">Check Answer</button>
+            `;
+
+            function loadQuestion() {
+                const sentence = sentences[currentQ];
+                const display = sentence.text.replace(`(${sentence.base})`, `<span class="text-red-600 font-extrabold">(${sentence.base})</span>`);
+                document.getElementById('q5-number').textContent = currentQ + 1;
+                document.getElementById('q5-sentence').innerHTML = display;
+                document.getElementById('q5-input').value = '';
+                document.getElementById('game-result').classList.add('hidden');
+                document.getElementById('q5-input').focus();
+            }
+
+            window.checkGame5 = function() {
+                const sentence = sentences[currentQ];
+                const input = document.getElementById('q5-input').value.trim().toLowerCase();
+                const correct = sentence.past.toLowerCase();
+
+                if (input === correct) {
+                    score++;
+                    document.getElementById('game-result').textContent = 'Correct!';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    document.getElementById('game-result').textContent = `Incorrect. The correct answer is "${correct}".`;
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                }
+
+                currentQ++;
+                if (currentQ < TOTAL_QUESTIONS) {
+                    setTimeout(loadQuestion, 1500);
+                } else {
+                    setTimeout(() => {
+                        showModal('Challenge Finished!', `Your score is ${score} out of ${TOTAL_QUESTIONS}!`, score >= 3 ? 'award' : 'alert-triangle', score >= 3 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 3) markGameCompleted(currentGameId);
+                    }, 2000);
+                }
+            }
+
+            loadQuestion();
+        }
+
+        // 6. ¡Extinción! (Quick Verb Check)
+        function initGame6() {
+            const incorrectVerbs = shuffle([
+                { base: "go", past: "goed", correct: "went" },
+                { base: "eat", past: "eated", correct: "ate" },
+                { base: "see", past: "seed", correct: "saw" },
+                { base: "run", past: "runned", correct: "ran" },
+                { base: "make", past: "maked", correct: "made" }
+            ]);
+            let correctVerbs = shuffle(VERBS.regular).slice(0, 5);
+
+            let currentQ = 0;
+            let score = 0;
+            const TOTAL_QUESTIONS = 5;
+            let timer = 10;
+            let timerInterval;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg font-bold text-red-600">MISSION: Quickly find the ONE incorrect Past Simple verb!</p>
+                <div id="timer-bar" class="w-full h-4 bg-gray-200 rounded-full mb-4 overflow-hidden">
+                    <div id="timer-fill" class="h-full bg-red-500 transition-all duration-1000 ease-linear"></div>
+                </div>
+                <div id="q6-container" class="grid grid-cols-3 gap-4"></div>
+            `;
+
+            function loadQuestion() {
+                clearInterval(timerInterval);
+                timer = 10;
+                document.getElementById('timer-fill').style.width = '100%';
+                
+                const question = incorrectVerbs[currentQ];
+                
+                let verbSet = [...correctVerbs.map(v => v.past)];
+                const randomIndex = Math.floor(Math.random() * verbSet.length);
+                verbSet[randomIndex] = question.past; // Insertar el incorrecto
+
+                const container = document.getElementById('q6-container');
+                container.innerHTML = '';
+                
+                shuffle(verbSet).forEach(v => {
+                    const isCorrectOption = v === question.past;
+                    container.innerHTML += `
+                        <button onclick="answerGame6(${isCorrectOption}, '${v}', '${question.correct}')" 
+                            class="p-4 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition-colors text-xl">
+                            ${v}
+                        </button>
+                    `;
+                });
+                
+                document.getElementById('game-result').classList.add('hidden');
+                
+                timerInterval = setInterval(() => {
+                    timer--;
+                    document.getElementById('timer-fill').style.width = `${(timer / 10) * 100}%`;
+                    if (timer <= 0) {
+                        clearInterval(timerInterval);
+                        document.getElementById('game-result').textContent = `Time out! The incorrect verb was ${question.past} (correct: ${question.correct}).`;
+                        document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                        document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                        handleNextQuestion();
+                    }
+                }, 1000);
+            }
+
+            function handleNextQuestion() {
+                currentQ++;
+                if (currentQ < TOTAL_QUESTIONS) {
+                    setTimeout(loadQuestion, 2000);
+                } else {
+                    setTimeout(() => {
+                        showModal('Mission Complete!', `You successfully identified ${score} out of ${TOTAL_QUESTIONS} incorrect verbs!`, score >= 3 ? 'award' : 'alert-triangle', score >= 3 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 3) markGameCompleted(currentGameId);
+                    }, 2000);
+                }
+            }
+
+            window.answerGame6 = function(isIncorrectVerb, verb, correct) {
+                clearInterval(timerInterval);
+                if (isIncorrectVerb) {
+                    score++;
+                    document.getElementById('game-result').textContent = `Correct! ${verb} is wrong (should be ${correct}).`;
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    document.getElementById('game-result').textContent = `Wrong! ${verb} is a correct past form.`;
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                }
+                handleNextQuestion();
+            }
+
+            loadQuestion();
+        }
+        
+        // 7. Story Chain Starter
+        function initGame7() {
+            const stories = shuffle([
+                { start: "Yesterday, I woke up late.", options: ["Then, I ate a quick breakfast.", "Then, I go to work.", "Tomorrow, I will call my boss."], correct: 0 },
+                { start: "Last weekend, we went to the mountains.", options: ["We were seeing a lot of birds.", "After that, we saw a lot of birds.", "We see a lot of birds now."], correct: 1 },
+                { start: "I lost my keys last night.", options: ["I didn't find them in the morning.", "I not find them in the morning.", "I didn't found them in the morning."], correct: 0 },
+                { start: "My favorite team played a game on Saturday.", options: ["They win the match.", "Finally, they won the match.", "They winning the match now."], correct: 1 }
+            ]).slice(0, 3);
+
+            let currentQ = 0;
+            let score = 0;
+            const TOTAL_QUESTIONS = stories.length;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg">Read the first sentence of the story and select the best Simple Past continuation.</p>
+                <div class="text-xl font-semibold mb-4">Story <span id="q7-number">1</span> of ${TOTAL_QUESTIONS}</div>
+                <div id="q7-start" class="text-2xl font-bold p-6 bg-purple-50 text-purple-800 rounded-lg mb-6"></div>
+                <div id="q7-options" class="grid grid-cols-1 gap-4"></div>
+            `;
+
+            function loadQuestion() {
+                const story = stories[currentQ];
+                document.getElementById('q7-number').textContent = currentQ + 1;
+                document.getElementById('q7-start').textContent = story.start;
+                const optionsDiv = document.getElementById('q7-options');
+                optionsDiv.innerHTML = '';
+                
+                story.options.forEach((opt, index) => {
+                    optionsDiv.innerHTML += `
+                        <button onclick="answerGame7(${index}, ${story.correct})" 
+                            class="p-4 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-colors text-left text-lg">
+                            ${opt}
+                        </button>
+                    `;
+                });
+                document.getElementById('game-result').classList.add('hidden');
+            }
+
+            window.answerGame7 = function(selectedIndex, correctIndex) {
+                if (selectedIndex === correctIndex) {
+                    score++;
+                    document.getElementById('game-result').textContent = 'Correct continuation! Good usage of sequencing words.';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    document.getElementById('game-result').textContent = 'Incorrect. Check the verb form or sequencing word.';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                }
+
+                currentQ++;
+                if (currentQ < TOTAL_QUESTIONS) {
+                    setTimeout(loadQuestion, 1500);
+                } else {
+                    setTimeout(() => {
+                        showModal('Storyteller Achieved!', `Your story score is ${score} out of ${TOTAL_QUESTIONS}!`, score >= 2 ? 'award' : 'alert-triangle', score >= 2 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 2) markGameCompleted(currentGameId);
+                    }, 2000);
+                }
+            }
+
+            loadQuestion();
+        }
+
+        // 8. Sentence Builder (Strategy Game)
+        function initGame8() {
+            const sentences = shuffle([
+                ["We", "didn't", "watch", "the", "movie", "last", "night", "."],
+                ["Did", "she", "finish", "her", "homework", "?"],
+                ["My", "friend", "ate", "all", "the", "pizza", "."],
+                ["I", "worked", "hard", "yesterday", "."]
+            ]).slice(0, 3);
+
+            let currentQ = 0;
+            let score = 0;
+            const TOTAL_QUESTIONS = sentences.length;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg font-bold text-primary-500">Arrange the words in the correct order to form a Simple Past sentence.</p>
+                <div id="word-bank" class="flex flex-wrap gap-2 p-4 bg-gray-100 rounded-lg mb-4 min-h-[50px]"></div>
+                <div id="sentence-target" class="flex flex-wrap gap-2 p-4 bg-white border-2 border-dashed border-primary-300 rounded-lg mb-6 min-h-[50px]"></div>
+                <button onclick="checkGame8()" class="game-button bg-secondary-500 text-white p-3 rounded-xl hover:bg-amber-600 w-full">Check Sentence</button>
+            `;
+            
+            let currentSentence = [];
+
+            function loadQuestion() {
+                const words = shuffle([...sentences[currentQ]]);
+                const wordBank = document.getElementById('word-bank');
+                const target = document.getElementById('sentence-target');
+                wordBank.innerHTML = '';
+                target.innerHTML = '';
+                currentSentence = [];
+                
+                words.forEach(word => {
+                    wordBank.innerHTML += `<div data-word="${word}" class="word-chip p-2 bg-primary-300 text-primary-900 font-semibold rounded-full cursor-pointer hover:bg-primary-400 transition-colors">${word}</div>`;
+                });
+
+                document.getElementById('game-result').classList.add('hidden');
+                
+                document.querySelectorAll('.word-chip').forEach(chip => {
+                    chip.addEventListener('click', function() {
+                        if (chip.parentNode.id === 'word-bank') {
+                            // Mover a target
+                            target.appendChild(chip);
+                            currentSentence.push(chip.dataset.word);
+                        } else if (chip.parentNode.id === 'sentence-target') {
+                            // Mover a bank
+                            wordBank.appendChild(chip);
+                            currentSentence = currentSentence.filter(w => w !== chip.dataset.word);
+                        }
+                    });
+                });
+            }
+
+            window.checkGame8 = function() {
+                const correctSentence = sentences[currentQ].join(" ").replace(/\s\./g, '.').replace(/\s\?/g, '?');
+                const builtSentence = currentSentence.join(" ").replace(/\s\./g, '.').replace(/\s\?/g, '?');
+
+                const resultDiv = document.getElementById('game-result');
+
+                if (builtSentence === correctSentence) {
+                    score++;
+                    resultDiv.textContent = `Correct! Sentence: "${builtSentence}"`;
+                    resultDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    resultDiv.classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    resultDiv.textContent = `Incorrect. Built: "${builtSentence}". Correct: "${correctSentence}"`;
+                    resultDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    resultDiv.classList.add('bg-red-100', 'text-red-700');
+                }
+
+                currentQ++;
+                if (currentQ < TOTAL_QUESTIONS) {
+                    setTimeout(() => {
+                        loadQuestion();
+                        document.getElementById('game-result').classList.add('hidden');
+                    }, 2000);
+                } else {
+                    setTimeout(() => {
+                        showModal('Builder Finished!', `Your score is ${score} out of ${TOTAL_QUESTIONS}!`, score >= 2 ? 'award' : 'alert-triangle', score >= 2 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 2) markGameCompleted(currentGameId);
+                    }, 2500);
+                }
+            }
+
+            loadQuestion();
+        }
+
+        // 9. The Simple Past Trivia (Mixed)
+        function initGame9() {
+            const questions = shuffle([
+                { q: "What is the Simple Past form of 'to begin'?", options: ["began", "beginned", "begun"], correct: "began" },
+                { q: "Choose the correct negative sentence:", options: ["He didn't went home.", "He didn't go home.", "He not go home."], correct: "He didn't go home." },
+                { q: "What is the pronunciation of the -ed in 'visited'?", options: ["/t/", "/d/", "/ɪd/"], correct: "/ɪd/" },
+                { q: "The past form of 'to read' is spelled the same, but pronounced differently. What is the past form?", options: ["read", "readed", "red"], correct: "read" },
+                { q: "The Simple Past is used for:", options: ["Actions happening now.", "Actions finished in the past.", "Future plans."], correct: "Actions finished in the past." }
+            ]).slice(0, 5);
+
+            let currentQ = 0;
+            let score = 0;
+            const TOTAL_QUESTIONS = questions.length;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg">Test your knowledge with these mixed questions.</p>
+                <div class="text-xl font-semibold mb-4">Question <span id="q9-number">1</span> of ${TOTAL_QUESTIONS}</div>
+                <div id="q9-text" class="text-2xl font-bold p-6 bg-orange-50 text-orange-800 rounded-lg mb-6"></div>
+                <div id="q9-options" class="grid grid-cols-1 gap-4"></div>
+            `;
+
+            function loadQuestion() {
+                const question = questions[currentQ];
+                document.getElementById('q9-number').textContent = currentQ + 1;
+                document.getElementById('q9-text').textContent = question.q;
+                const optionsDiv = document.getElementById('q9-options');
+                optionsDiv.innerHTML = '';
+                
+                shuffle(question.options).forEach(opt => {
+                    optionsDiv.innerHTML += `
+                        <button onclick="answerGame9('${opt}', '${question.correct}')" 
+                            class="p-4 bg-primary-500 text-white font-bold rounded-xl hover:bg-primary-600 transition-colors text-left text-lg">
+                            ${opt}
+                        </button>
+                    `;
+                });
+                document.getElementById('game-result').classList.add('hidden');
+            }
+
+            window.answerGame9 = function(selected, correct) {
+                if (selected === correct) {
+                    score++;
+                    document.getElementById('game-result').textContent = 'Correct!';
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    document.getElementById('game-result').classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    document.getElementById('game-result').textContent = `Incorrect. The correct answer is "${correct}".`;
+                    document.getElementById('game-result').classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    document.getElementById('game-result').classList.add('bg-red-100', 'text-red-700');
+                }
+
+                currentQ++;
+                if (currentQ < TOTAL_QUESTIONS) {
+                    setTimeout(loadQuestion, 1500);
+                } else {
+                    setTimeout(() => {
+                        showModal('Trivia Finished!', `Final Score: ${score} out of ${TOTAL_QUESTIONS}!`, score >= 4 ? 'award' : 'alert-triangle', score >= 4 ? 'bg-green-500' : 'bg-yellow-500');
+                        if (score >= 4) markGameCompleted(currentGameId);
+                    }, 2000);
+                }
+            }
+
+            loadQuestion();
+        }
+
+        // 10. La Oca of the Simple Past (The Goose Game)
+        function initGame10() {
+            const questions = shuffle([
+                { q: "Past of SEE?", a: "saw" },
+                { q: "Past of STUDY?", a: "studied" },
+                { q: "Past of BUY?", a: "bought" },
+                { q: "Past of DRINK?", a: "drank" },
+                { q: "Past of CALL?", a: "called" },
+                { q: "Past of TAKE?", a: "took" },
+                { q: "Negative of: I ran.", a: "I didn't run." },
+                { q: "Question for: She drove.", a: "Did she drive?" },
+                { q: "Past of SLEEP?", a: "slept" },
+                { q: "Past of LIVE?", a: "lived" }
+            ]);
+
+            const BOARD_SIZE = 10;
+            let playerPosition = 0;
+            let currentQuestionIndex = 0;
+
+            document.getElementById('game-content').innerHTML = `
+                <p class="mb-4 text-lg font-bold text-secondary-500">Goal: Reach the end of the board! Roll the dice and answer a question.</p>
+                <div class="flex justify-between items-center mb-4">
+                    <div class="text-xl font-bold">Position: <span id="player-pos">0</span> / ${BOARD_SIZE}</div>
+                    <div id="dice-result" class="text-3xl font-extrabold text-red-500"></div>
+                </div>
+                <div id="board-container" class="flex flex-wrap border border-gray-300 rounded-lg mb-6 overflow-hidden"></div>
+                <button id="roll-button" onclick="rollDice10()" class="game-button bg-secondary-500 text-white p-3 rounded-xl hover:bg-amber-600 w-full">Roll Dice (Move)</button>
+
+                <div id="question-area" class="mt-6 p-4 bg-white border border-gray-300 rounded-lg hidden">
+                    <h4 class="font-bold mb-2">Question:</h4>
+                    <p id="q10-text" class="mb-4"></p>
+                    <input type="text" id="q10-input" class="w-full p-2 border rounded-lg mb-3" placeholder="Write your answer here...">
+                    <button onclick="checkAnswer10()" class="w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600">Submit Answer</button>
+                </div>
+            `;
+            
+            // Renderizar el tablero
+            const boardContainer = document.getElementById('board-container');
+            for(let i = 1; i <= BOARD_SIZE; i++) {
+                boardContainer.innerHTML += `<div id="square-${i}" class="w-1/5 h-16 sm:w-1/10 flex items-center justify-center border border-gray-200 text-sm font-bold transition-colors duration-500">
+                    ${i}
+                </div>`;
+            }
+
+            function updateBoard() {
+                for(let i = 1; i <= BOARD_SIZE; i++) {
+                    const square = document.getElementById(`square-${i}`);
+                    square.classList.remove('bg-green-300', 'bg-blue-200');
+                    if (i === playerPosition) {
+                        square.classList.add('bg-green-300');
+                        square.textContent = 'YOU!';
+                    } else {
+                        square.textContent = i;
+                        if (i % 3 === 0) square.classList.add('bg-blue-200');
+                    }
+                }
+                document.getElementById('player-pos').textContent = playerPosition;
+                document.getElementById('dice-result').textContent = '';
+            }
+
+            updateBoard();
+
+            window.rollDice10 = function() {
+                const dice = Math.floor(Math.random() * 3) + 1; // 1 to 3
+                document.getElementById('dice-result').textContent = `Rolled: ${dice}`;
+                
+                document.getElementById('roll-button').disabled = true;
+                document.getElementById('question-area').classList.remove('hidden');
+                
+                const question = questions[currentQuestionIndex % questions.length];
+                document.getElementById('q10-text').textContent = question.q;
+                document.getElementById('q10-input').value = '';
+                document.getElementById('q10-input').dataset.answer = question.a.toLowerCase();
+                document.getElementById('q10-input').dataset.move = dice;
+                document.getElementById('q10-input').focus();
+            }
+
+            window.checkAnswer10 = function() {
+                const input = document.getElementById('q10-input').value.trim().toLowerCase();
+                const correct = document.getElementById('q10-input').dataset.answer;
+                const move = parseInt(document.getElementById('q10-input').dataset.move);
+
+                document.getElementById('question-area').classList.add('hidden');
+                document.getElementById('roll-button').disabled = false;
+                
+                const resultDiv = document.getElementById('game-result');
+
+                if (input === correct) {
+                    playerPosition += move;
+                    resultDiv.textContent = `Correct! Advance ${move} squares. New Position: ${playerPosition}`;
+                    resultDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                    resultDiv.classList.add('bg-green-100', 'text-green-700');
+                } else {
+                    resultDiv.textContent = `Incorrect! Stay here. Correct answer: "${correct}"`;
+                    resultDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700');
+                    resultDiv.classList.add('bg-red-100', 'text-red-700');
+                }
+                
+                currentQuestionIndex++;
+                updateBoard();
+
+                if (playerPosition >= BOARD_SIZE) {
+                    showModal('Game Won!', '¡Has ganado La Oca del Pasado Simple!', 'trophy', 'bg-secondary-500');
+                    markGameCompleted(currentGameId);
+                    playerPosition = 0; // Reset
+                }
+            }
+        }
+
+        // Ejecutar funciones de inicialización
+        // Asignar el cambio de lección a los botones del menú
+        document.querySelectorAll('.lesson-link').forEach(button => {
+            button.addEventListener('click', () => {
+                const lessonId = parseInt(button.dataset.lesson);
+                changeLesson(lessonId);
+            });
+        });
+
+    </script>
+</body>
+</html>
